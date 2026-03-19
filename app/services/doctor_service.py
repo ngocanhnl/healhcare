@@ -1,0 +1,36 @@
+from datetime import date
+
+from app.extensions import db
+from app.models.doctor import Doctor
+from app.models.schedule import Schedule
+from app.models.user import User
+
+
+class DoctorService:
+    @staticmethod
+    def list_specialties() -> list[str]:
+        rows = db.session.execute(db.select(Doctor.specialty).distinct().order_by(Doctor.specialty)).all()
+        return [r[0] for r in rows]
+
+    @staticmethod
+    def search_doctors(*, specialty: str | None) -> list[Doctor]:
+        stmt = db.select(Doctor).join(User).order_by(User.username)
+        if specialty:
+            stmt = stmt.where(Doctor.specialty.ilike(f"%{specialty.strip()}%"))
+        return list(db.session.execute(stmt).scalars().all())
+
+    @staticmethod
+    def get_doctor(doctor_id: int) -> Doctor | None:
+        return db.session.get(Doctor, doctor_id)
+
+    @staticmethod
+    def get_available_schedules(*, doctor_id: int, from_date: date | None = None) -> list[Schedule]:
+        stmt = (
+            db.select(Schedule)
+            .where(Schedule.doctor_id == doctor_id, Schedule.is_available.is_(True))
+            .order_by(Schedule.date, Schedule.start_time)
+        )
+        if from_date:
+            stmt = stmt.where(Schedule.date >= from_date)
+        return list(db.session.execute(stmt).scalars().all())
+

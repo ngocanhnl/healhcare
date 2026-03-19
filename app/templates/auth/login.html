@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Login</h1>
+        <form method="post">
+          {{ form.csrf_token }}
+          <div class="mb-3">
+            <label class="form-label">{{ form.username.label }}</label>
+            {{ form.username(class="form-control", placeholder="username") }}
+            {% for e in form.username.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.password.label }}</label>
+            {{ form.password(class="form-control", placeholder="password") }}
+            {% for e in form.password.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+          <button class="btn btn-primary w-100" type="submit">{{ form.submit.label.text }}</button>
+        </form>
+        <div class="mt-3 small">
+          No account? <a href="{{ url_for('auth.register') }}">Register</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Patient dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-end mb-3">
+  <div>
+    <h1 class="h4 mb-0">My appointments</h1>
+    <div class="text-muted">Track your booking history.</div>
+  </div>
+  <a class="btn btn-outline-primary" href="{{ url_for('patient.search') }}">Book new</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Doctor</th>
+            <th>Specialty</th>
+            <th>Slot</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in appointments %}
+            <tr>
+              <td>{{ a.doctor.user.username }}</td>
+              <td class="text-muted">{{ a.doctor.specialty }}</td>
+              <td>{{ a.schedule.date }} {{ a.schedule.start_time.strftime('%H:%M') }}-{{ a.schedule.end_time.strftime('%H:%M') }}</td>
+              <td>
+                {% if a.status.value == 'PENDING' %}
+                  <span class="badge text-bg-warning">PENDING</span>
+                {% elif a.status.value == 'CONFIRMED' %}
+                  <span class="badge text-bg-success">CONFIRMED</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">CANCELLED</span>
+                {% endif %}
+              </td>
+              <td class="text-muted small">{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-muted">No appointments yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

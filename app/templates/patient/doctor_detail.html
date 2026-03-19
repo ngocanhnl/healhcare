@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Doctor profile{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h5 mb-1">{{ doctor.user.username }}</h1>
+        <div class="text-muted">{{ doctor.specialty }}</div>
+        <div class="mt-2">
+          <span class="badge text-bg-primary">{{ doctor.experience_years }} years experience</span>
+        </div>
+        {% if doctor.description %}
+          <hr />
+          <div class="small">{{ doctor.description }}</div>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-white">
+        <a class="btn btn-outline-secondary w-100" href="{{ url_for('patient.search') }}">Back to search</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Available slots</h2>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in schedules %}
+                <tr>
+                  <td>{{ s.date }}</td>
+                  <td>{{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}</td>
+                  <td class="text-end">
+                    {% if current_user.is_authenticated and current_user.role.value == 'PATIENT' %}
+                      <a class="btn btn-sm btn-primary" href="{{ url_for('patient.book', schedule_id=s.id) }}">Book</a>
+                    {% else %}
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('auth.login') }}">Login to book</a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="3" class="text-muted">No available slots.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
