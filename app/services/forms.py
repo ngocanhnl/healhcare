@@ -31,6 +31,7 @@ class RegisterForm(FlaskForm):
 
     # Doctor extra fields (only used when role=DOCTOR)
     specialty = StringField("Specialty")
+    hospital_name = StringField("Hospital/Clinic")
     description = TextAreaField("Description")
     experience_years = IntegerField("Experience (years)", default=0)
 
@@ -55,7 +56,11 @@ class LoginForm(FlaskForm):
 
 
 class SearchDoctorForm(FlaskForm):
+    doctor_name = StringField("Doctor name", validators=[Length(max=80)])
+    hospital_name = StringField("Hospital/Clinic", validators=[Length(max=160)])
     specialty = StringField("Specialty", validators=[Length(max=120)])
+    min_experience_years = IntegerField("Min experience (years)", validators=[NumberRange(min=0, max=80)], default=None)
+    max_experience_years = IntegerField("Max experience (years)", validators=[NumberRange(min=0, max=80)], default=None)
     submit = SubmitField("Search")
 
 
@@ -76,8 +81,38 @@ class ScheduleForm(FlaskForm):
             raise ValidationError("End time must be after start time")
 
 
+class WeeklyShiftForm(FlaskForm):
+    weekday = SelectField(
+        "Day of week",
+        choices=[
+            ("0", "Monday"),
+            ("1", "Tuesday"),
+            ("2", "Wednesday"),
+            ("3", "Thursday"),
+            ("4", "Friday"),
+            ("5", "Saturday"),
+            ("6", "Sunday"),
+        ],
+        validators=[DataRequired()],
+    )
+    start_time = TimeField("Start time", validators=[DataRequired()], default=time(7, 0))
+    end_time = TimeField("End time", validators=[DataRequired()], default=time(8, 0))
+    submit = SubmitField("Add shift")
+
+    def validate_end_time(self, field):
+        if self.start_time.data and field.data and field.data <= self.start_time.data:
+            raise ValidationError("End time must be after start time")
+
+
 class BookingForm(FlaskForm):
     submit = SubmitField("Book this slot")
+
+
+class NewAppointmentForm(FlaskForm):
+    hospital_id = SelectField("Hospital/Clinic", choices=[], default="", validate_choice=False)
+    doctor_id = SelectField("Doctor", choices=[], default="", validate_choice=False)
+    date = DateField("Date", default=date.today)
+    submit = SubmitField("Search slots")
 
 
 class UpdateAppointmentStatusForm(FlaskForm):

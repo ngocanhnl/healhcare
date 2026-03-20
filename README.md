@@ -67,6 +67,14 @@ SOURCE sql/schema.sql;
 
 Hoặc copy/paste nội dung vào MySQL client.
 
+### 3.1) Migration (nếu DB đã tồn tại)
+
+Nếu bạn đã có DB cũ và muốn thêm bảng `hospitals` + quan hệ 1 bệnh viện - nhiều bác sĩ:
+
+```sql
+SOURCE sql/migration_add_hospitals.sql;
+```
+
 ### 4) Configure environment
 
 Tạo file `.env` từ `.env.example` và sửa `DATABASE_URL` đúng MySQL của bạn.

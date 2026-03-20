@@ -20,10 +20,12 @@
             </li>
             {% if current_user.is_authenticated and current_user.role.value == 'PATIENT' %}
               <li class="nav-item"><a class="nav-link" href="{{ url_for('patient.dashboard') }}">My appointments</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('patient.appointment_new') }}">Book appointment</a></li>
             {% endif %}
             {% if current_user.is_authenticated and current_user.role.value == 'DOCTOR' %}
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.dashboard') }}">Doctor dashboard</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.schedules') }}">Schedules</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.weekly') }}">Weekly shifts</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.appointments') }}">Appointments</a></li>
             {% endif %}
             {% if current_user.is_authenticated and current_user.role.value == 'ADMIN' %}
@@ -37,7 +39,7 @@
               </li>
               <li class="nav-item">
                 <form method="post" action="{{ url_for('auth.logout') }}">
-                  {{ csrf_token() }}
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button class="btn btn-outline-light btn-sm" type="submit">Logout</button>
                 </form>
               </li>

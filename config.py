@@ -13,7 +13,7 @@ class Config:
     # mysql+pymysql://user:password@localhost:3306/medical_platform?charset=utf8mb4
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://root:root@localhost:3307/medical_platform?charset=utf8mb4",
+        "mysql+pymysql://root:root@localhost:3306/medical_platform?charset=utf8mb4",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

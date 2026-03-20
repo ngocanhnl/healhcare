@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from flask import Blueprint, abort, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
@@ -5,9 +7,10 @@ from app.extensions import db
 from app.models.appointment import Appointment
 from app.models.enums import AppointmentStatus, UserRole
 from app.models.schedule import Schedule
+from app.models.weekly_shift import WeeklyShift
 from app.services.appointment_service import AppointmentService
 from app.services.authz import roles_required
-from app.services.forms import ScheduleForm, UpdateAppointmentStatusForm
+from app.services.forms import ScheduleForm, UpdateAppointmentStatusForm, WeeklyShiftForm
 from app.services.schedule_service import ScheduleService
 
 doctor_bp = Blueprint("doctor", __name__, url_prefix="/doctor")
@@ -27,6 +30,79 @@ def dashboard():
     schedules = ScheduleService.list_doctor_schedules(doctor_id=doctor.id)[:10]
     appts = AppointmentService.list_for_doctor(doctor_id=doctor.id)[:10]
     return render_template("doctor/dashboard.html", schedules=schedules, appointments=appts)
+
+
+@doctor_bp.get("/weekly")
+@doctor_bp.post("/weekly")
+@login_required
+@roles_required(UserRole.DOCTOR)
+def weekly():
+    doctor = _require_doctor_profile()
+    form = WeeklyShiftForm()
+
+    if form.validate_on_submit():
+        shift = WeeklyShift(
+            doctor_id=doctor.id,
+            weekday=int(form.weekday.data),
+            start_time=form.start_time.data,
+            end_time=form.end_time.data,
+            is_active=True,
+        )
+        db.session.add(shift)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash("Shift already exists or invalid", "danger")
+        else:
+            flash("Weekly shift added", "success")
+        return redirect(url_for("doctor.weekly"))
+
+    created = ScheduleService.ensure_next_days_from_weekly_shifts(doctor_id=doctor.id, days_ahead=7)
+    if created:
+        flash(f"Generated {created} slots for next 7 days", "info")
+
+    shifts = list(
+        db.session.execute(
+            db.select(WeeklyShift)
+            .where(WeeklyShift.doctor_id == doctor.id)
+            .order_by(WeeklyShift.weekday, WeeklyShift.start_time)
+        ).scalars().all()
+    )
+
+    start = date.today()
+    days = [start + timedelta(days=i) for i in range(7)]
+    schedules = ScheduleService.list_doctor_schedules(doctor_id=doctor.id)
+    schedules_by_date: dict[date, list[Schedule]] = {d: [] for d in days}
+    for s in schedules:
+        if s.date in schedules_by_date:
+            schedules_by_date[s.date].append(s)
+    for d in days:
+        schedules_by_date[d].sort(key=lambda x: x.start_time)
+
+    weekday_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    return render_template(
+        "doctor/weekly.html",
+        form=form,
+        shifts=shifts,
+        days=days,
+        schedules_by_date=schedules_by_date,
+        weekday_labels=weekday_labels,
+    )
+
+
+@doctor_bp.post("/weekly/<int:shift_id>/delete")
+@login_required
+@roles_required(UserRole.DOCTOR)
+def weekly_delete(shift_id: int):
+    doctor = _require_doctor_profile()
+    shift = db.session.get(WeeklyShift, shift_id)
+    if not shift or shift.doctor_id != doctor.id:
+        abort(404)
+    db.session.delete(shift)
+    db.session.commit()
+    flash("Weekly shift deleted", "info")
+    return redirect(url_for("doctor.weekly"))
 
 
 @doctor_bp.get("/schedules")
