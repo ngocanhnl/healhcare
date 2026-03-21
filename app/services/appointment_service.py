@@ -8,7 +8,7 @@ from app.models.schedule import Schedule
 
 class AppointmentService:
     @staticmethod
-    def book(*, patient_id: int, schedule_id: int) -> Appointment:
+    def book(*, patient_id: int, schedule_id: int, status: AppointmentStatus = AppointmentStatus.PENDING) -> Appointment:
         schedule = db.session.get(Schedule, schedule_id)
         if not schedule:
             raise ValueError("Schedule not found")
@@ -19,7 +19,7 @@ class AppointmentService:
             patient_id=patient_id,
             doctor_id=schedule.doctor_id,
             schedule_id=schedule.id,
-            status=AppointmentStatus.PENDING,
+            status=status,
         )
         db.session.add(appt)
         schedule.is_available = False

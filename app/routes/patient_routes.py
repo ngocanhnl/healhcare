@@ -1,11 +1,15 @@
 from datetime import date, timedelta
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from app.models.enums import UserRole
+from app.extensions import db
+from app.models.enums import AppointmentStatus, PaymentStatus, UserRole
+from app.models.payment_transaction import PaymentTransaction
+from app.models.schedule import Schedule
 from app.services.appointment_service import AppointmentService
 from app.services.doctor_service import DoctorService
+from app.services.vnpay_service import VnpayService
 from app.services.forms import BookingForm, NewAppointmentForm, SearchDoctorForm
 from app.services.authz import roles_required
 
@@ -157,16 +161,120 @@ def appointment_new():
 @roles_required(UserRole.PATIENT)
 def book(schedule_id: int):
     form = BookingForm()
+    amount = 500000.0  # Amount in VND (demo)
+    schedule = Schedule.query.get(schedule_id)
+
+    if schedule is None:
+        abort(404)
+
     if form.validate_on_submit():
+        ip_addr = (
+            request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+            or request.remote_addr
+            or "127.0.0.1"
+        )
+
+        txn_ref = VnpayService.generate_txn_ref()
+
+        # VNPay order info: must be ASCII, no accents/special characters (demo).
+        order_info = f"Thanh toan don hang {txn_ref}"
+
+        transaction = PaymentTransaction(
+            patient_id=current_user.id,
+            schedule_id=schedule_id,
+            vnp_txn_ref=txn_ref,
+            amount_vnd=int(amount),
+            status=PaymentStatus.PENDING,
+        )
+        db.session.add(transaction)
+        db.session.commit()
+
         try:
-            AppointmentService.book(patient_id=current_user.id, schedule_id=schedule_id)
-        except ValueError as e:
-            flash(str(e), "danger")
-            return redirect(url_for("patient.appointment_new"))
-        flash("Appointment created (PENDING). Doctor will confirm.", "success")
+            payment_url = VnpayService.create_payment_url(
+                payment_url=current_app.config["VNPAY_PAYMENT_URL"],
+                tmn_code=current_app.config["VNPAY_TMN_CODE"],
+                hash_secret=current_app.config["VNPAY_HASH_SECRET"],
+                return_url=url_for("patient.vnpay_return", _external=True),
+                ip_addr=ip_addr,
+                locale=current_app.config["VNPAY_LOCALE"],
+                curr_code=current_app.config["VNPAY_CURR_CODE"],
+                order_type=current_app.config["VNPAY_ORDER_TYPE"],
+                txn_ref=txn_ref,
+                amount_vnd=int(amount),
+                order_info=order_info,
+                version=current_app.config["VNPAY_VERSION"],
+            )
+        except Exception:
+            transaction.status = PaymentStatus.FAILED
+            db.session.commit()
+            flash("Failed to create VNPay payment URL.", "danger")
+            return render_template(
+                "patient/booking.html",
+                form=form,
+                schedule_id=schedule_id,
+                amount=amount,
+                schedule=schedule,
+            )
+
+        return redirect(payment_url)
+
+    return render_template(
+        "patient/booking.html", form=form, schedule_id=schedule_id, amount=amount, schedule=schedule
+    )
+
+
+@patient_bp.get("/payment-result")
+def vnpay_return():
+    # VNPay callback: no CSRF needed, we validate VNPay signature.
+    params = request.args.to_dict(flat=True)
+    provided_secure_hash = params.get("vnp_SecureHash", "")
+    vnp_txn_ref = params.get("vnp_TxnRef", "")
+    response_code = params.get("vnp_ResponseCode", "")
+
+    secure_valid = VnpayService.verify_return(
+        hash_secret=current_app.config["VNPAY_HASH_SECRET"],
+        vnp_params=params,
+        provided_secure_hash=provided_secure_hash,
+    )
+
+    if not vnp_txn_ref:
+        flash("Payment callback missing txn ref.", "danger")
+        return redirect(url_for("auth.login"))
+
+    transaction = db.session.execute(
+        db.select(PaymentTransaction).where(PaymentTransaction.vnp_txn_ref == vnp_txn_ref)
+    ).scalar_one_or_none()
+
+    if not transaction:
+        flash("Payment transaction not found.", "danger")
+        return redirect(url_for("auth.login"))
+
+    if transaction.status == PaymentStatus.SUCCESS:
+        flash("Payment already processed.", "info")
         return redirect(url_for("patient.dashboard"))
 
-    return render_template("patient/booking.html", form=form, schedule_id=schedule_id)
+    if secure_valid and response_code == "00":
+        try:
+            AppointmentService.book(
+                patient_id=transaction.patient_id,
+                schedule_id=transaction.schedule_id,
+                status=AppointmentStatus.PENDING,
+            )
+            transaction.status = PaymentStatus.SUCCESS
+            db.session.commit()
+        except ValueError:
+            transaction.status = PaymentStatus.FAILED
+            db.session.commit()
+            flash("Payment received but slot is no longer available.", "danger")
+            return redirect(url_for("patient.dashboard"))
+
+        flash("Payment successful. Appointment created (PENDING).", "success")
+        return redirect(url_for("patient.dashboard"))
+
+    transaction.status = PaymentStatus.FAILED
+    db.session.commit()
+    flash("Payment failed or invalid signature.", "danger")
+    return redirect(url_for("patient.dashboard"))
 
 
 @patient_bp.get("/patient/dashboard")

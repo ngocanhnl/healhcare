@@ -2,6 +2,7 @@ from datetime import date, time
 
 from flask_wtf import FlaskForm
 from wtforms import (
+    BooleanField,
     PasswordField,
     SelectField,
     StringField,
@@ -9,7 +10,7 @@ from wtforms import (
     TextAreaField,
 )
 from wtforms.fields import DateField, IntegerField, TimeField
-from wtforms.validators import DataRequired, EqualTo, Length, NumberRange, ValidationError
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, ValidationError
 
 from app.extensions import db
 from app.models.user import User
@@ -105,7 +106,11 @@ class WeeklyShiftForm(FlaskForm):
 
 
 class BookingForm(FlaskForm):
-    submit = SubmitField("Book this slot")
+    fullname = StringField("Full name", validators=[DataRequired(), Length(min=2, max=80)])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    phone = StringField("Phone", validators=[DataRequired(), Length(min=8, max=20)])
+    agreed = BooleanField("I confirm the payment", validators=[DataRequired()])
+    submit = SubmitField("Pay with VNPay")
 
 
 class NewAppointmentForm(FlaskForm):
