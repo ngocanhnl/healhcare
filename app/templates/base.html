@@ -19,10 +19,12 @@
               <a class="nav-link" href="{{ url_for('patient.search') }}">Search doctors</a>
             </li>
             {% if current_user.is_authenticated and current_user.role.value == 'PATIENT' %}
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('patient.profile') }}">My profile</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('patient.dashboard') }}">My appointments</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('patient.appointment_new') }}">Book appointment</a></li>
             {% endif %}
             {% if current_user.is_authenticated and current_user.role.value == 'DOCTOR' %}
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.profile') }}">Doctor profile</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.dashboard') }}">Doctor dashboard</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.schedules') }}">Schedules</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.weekly') }}">Weekly shifts</a></li>
@@ -30,6 +32,8 @@
             {% endif %}
             {% if current_user.is_authenticated and current_user.role.value == 'ADMIN' %}
               <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.dashboard') }}">Doctor module</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('patient.dashboard') }}">Patient module</a></li>
             {% endif %}
           </ul>
           <ul class="navbar-nav ms-auto">

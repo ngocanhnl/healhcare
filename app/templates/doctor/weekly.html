@@ -95,9 +95,19 @@
                   <td>
                     {% if schedules_by_date[d] %}
                       {% for s in schedules_by_date[d] %}
-                        <span class="badge {% if s.is_available %}text-bg-success{% else %}text-bg-secondary{% endif %} me-1">
-                          {{ s.start_time.strftime('%H:%M') }}-{{ s.end_time.strftime('%H:%M') }}
-                        </span>
+                        {% if s.appointment %}
+                          <span class="badge text-bg-warning me-1">
+                            {{ s.start_time.strftime('%H:%M') }}-{{ s.end_time.strftime('%H:%M') }} (Booked)
+                          </span>
+                        {% elif s.is_available %}
+                          <span class="badge text-bg-success me-1">
+                            {{ s.start_time.strftime('%H:%M') }}-{{ s.end_time.strftime('%H:%M') }} (Available)
+                          </span>
+                        {% else %}
+                          <span class="badge text-bg-secondary me-1">
+                            {{ s.start_time.strftime('%H:%M') }}-{{ s.end_time.strftime('%H:%M') }} (Blocked)
+                          </span>
+                        {% endif %}
                       {% endfor %}
                     {% else %}
                       <span class="text-muted">No slots</span>
@@ -108,7 +118,7 @@
             </tbody>
           </table>
         </div>
-        <div class="small text-muted">Patients can only book slots marked available (green).</div>
+        <div class="small text-muted">Booked = yellow, Available = green, Blocked = gray.</div>
       </div>
     </div>
   </div>

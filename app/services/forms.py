@@ -128,3 +128,11 @@ class UpdateAppointmentStatusForm(FlaskForm):
     )
     submit = SubmitField("Update")
 
+
+class DoctorProfileForm(FlaskForm):
+    specialty = StringField("Specialty", validators=[DataRequired(), Length(min=2, max=120)])
+    hospital_name = StringField("Hospital/Clinic", validators=[Length(max=160)])
+    description = TextAreaField("Description", validators=[Length(max=2000)])
+    experience_years = IntegerField("Experience (years)", validators=[DataRequired(), NumberRange(min=0, max=80)])
+    submit = SubmitField("Save profile")
+

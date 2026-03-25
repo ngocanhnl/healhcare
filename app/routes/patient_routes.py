@@ -7,6 +7,7 @@ from app.extensions import db
 from app.models.enums import AppointmentStatus, PaymentStatus, UserRole
 from app.models.payment_transaction import PaymentTransaction
 from app.models.schedule import Schedule
+from app.models.user import User
 from app.services.appointment_service import AppointmentService
 from app.services.doctor_service import DoctorService
 from app.services.vnpay_service import VnpayService
@@ -14,6 +15,20 @@ from app.services.forms import BookingForm, NewAppointmentForm, SearchDoctorForm
 from app.services.authz import roles_required
 
 patient_bp = Blueprint("patient", __name__)
+
+
+def _target_patient_id() -> int:
+    if current_user.role != UserRole.ADMIN:
+        return current_user.id
+    patient_id = request.args.get("patient_id", type=int) or request.form.get("patient_id", type=int)
+    if patient_id:
+        patient = db.session.get(User, patient_id)
+        if patient and patient.role == UserRole.PATIENT:
+            return patient_id
+    first_patient = db.session.execute(
+        db.select(User).where(User.role == UserRole.PATIENT).order_by(User.id.asc())
+    ).scalars().first()
+    return first_patient.id if first_patient else current_user.id
 
 
 @patient_bp.get("/")
@@ -99,6 +114,7 @@ def doctor_detail(doctor_id: int):
 @roles_required(UserRole.PATIENT)
 def appointment_new():
     form = NewAppointmentForm()
+    patient_id = _target_patient_id()
 
     hospital_id = request.args.get("hospital_id", type=int) if request.method == "GET" else None
     doctor_id = request.args.get("doctor_id", type=int) if request.method == "GET" else None
@@ -117,6 +133,8 @@ def appointment_new():
             params["doctor_id"] = str(form.doctor_id.data)
         if form.date.data:
             params["date"] = form.date.data.isoformat()
+        if current_user.role == UserRole.ADMIN:
+            params["patient_id"] = str(patient_id)
         return redirect(url_for("patient.appointment_new", **params))
 
     if request.method == "GET":
@@ -163,6 +181,7 @@ def book(schedule_id: int):
     form = BookingForm()
     amount = 500000.0  # Amount in VND (demo)
     schedule = Schedule.query.get(schedule_id)
+    patient_id = _target_patient_id()
 
     if schedule is None:
         abort(404)
@@ -180,7 +199,7 @@ def book(schedule_id: int):
         order_info = f"Thanh toan don hang {txn_ref}"
 
         transaction = PaymentTransaction(
-            patient_id=current_user.id,
+            patient_id=patient_id,
             schedule_id=schedule_id,
             vnp_txn_ref=txn_ref,
             amount_vnd=int(amount),
@@ -281,6 +300,16 @@ def vnpay_return():
 @login_required
 @roles_required(UserRole.PATIENT)
 def dashboard():
-    appts = AppointmentService.list_for_patient(patient_id=current_user.id)
+    patient_id = _target_patient_id()
+    appts = AppointmentService.list_for_patient(patient_id=patient_id)
     return render_template("patient/dashboard.html", appointments=appts)
+
+
+@patient_bp.get("/patient/profile")
+@login_required
+@roles_required(UserRole.PATIENT)
+def profile():
+    patient_id = _target_patient_id()
+    appts = AppointmentService.list_for_patient(patient_id=patient_id)
+    return render_template("patient/profile.html", appointments=appts)
 
