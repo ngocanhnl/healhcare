@@ -67,6 +67,14 @@ SOURCE sql/schema.sql;
 
 Hoặc copy/paste nội dung vào MySQL client.
 
+### 3.1) Migration (nếu DB đã tồn tại)
+
+Nếu bạn đã có DB cũ và muốn thêm bảng `hospitals` + quan hệ 1 bệnh viện - nhiều bác sĩ:
+
+```sql
+SOURCE sql/migration_add_hospitals.sql;
+```
+
 ### 4) Configure environment
 
 Tạo file `.env` từ `.env.example` và sửa `DATABASE_URL` đúng MySQL của bạn.
@@ -112,12 +120,38 @@ python .\app.py
 
 Mở trình duyệt:
 
-- Home/Search: `http://127.0.0.1:5000/doctors/search`
-- Login: `http://127.0.0.1:5000/auth/login`
+- Home/Search: `http://127.0.0.1:3000/doctors/search`
+- Login: `http://127.0.0.1:3000/auth/login`
 
 ### 9) Notes (roles)
 
 - **PATIENT**: search doctors, view profile/slots, book appointment, xem dashboard
 - **DOCTOR**: CRUD schedules, xem & cập nhật trạng thái appointments
 - **ADMIN**: xem danh sách users (màn admin dashboard)
+
+## VNPay integration (nhúng thanh toán)
+
+### 1) Cấu hình `.env`
+Thêm các biến sau:
+```
+VNPAY_TMN_CODE=your_tmn_code
+VNPAY_HASH_SECRET=your_hash_secret
+VNPAY_PAYMENT_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNPAY_VERSION=2.1.0
+VNPAY_LOCALE=vn
+VNPAY_CURR_CODE=VND
+VNPAY_ORDER_TYPE=other
+```
+
+### 2) Tạo bảng `payment_transactions`
+Chạy migration:
+```sql
+SOURCE sql/migration_add_payment_transactions.sql;
+```
+
+### 3) Flow đặt lịch
+- Người bệnh nhấn `Pay & Book` trên trang bác sĩ
+- Hệ thống redirect sang VNPay để thanh toán
+- VNPay callback về `/vnpay/return`
+- Nếu `vnp_ResponseCode=00` và `vnp_SecureHash` hợp lệ => tạo appointment trạng thái `PENDING`
 

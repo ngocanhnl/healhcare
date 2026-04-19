@@ -6,10 +6,50 @@
   <div class="col-md-6">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h1 class="h5 mb-2">Confirm booking</h1>
-        <p class="text-muted mb-3">Click confirm to create an appointment in status <strong>PENDING</strong>.</p>
+        <h1 class="h5 mb-2">Thanh toán để đặt lịch</h1>
+        <p class="text-muted mb-3">Sau khi VNPay thanh toán thành công, lịch hẹn sẽ được tạo với trạng thái <strong>PENDING</strong>.</p>
+
+        {% if schedule %}
+          <div class="alert alert-light border">
+            <div class="small text-muted">Slot</div>
+            <div class="fw-semibold">
+              {{ schedule.date }} ({{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }})
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="alert alert-light border mb-3">
+          <div class="small text-muted">Total</div>
+          <div class="fw-semibold">{{ amount|round|int }} VND</div>
+        </div>
+
         <form method="post">
           {{ form.csrf_token }}
+
+          <div class="mb-3">
+            <label class="form-label">{{ form.fullname.label }}</label>
+            {{ form.fullname(class="form-control", placeholder="Full name") }}
+            {% for e in form.fullname.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">{{ form.email.label }}</label>
+            {{ form.email(class="form-control", placeholder="Email") }}
+            {% for e in form.email.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">{{ form.phone.label }}</label>
+            {{ form.phone(class="form-control", placeholder="Phone number") }}
+            {% for e in form.phone.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="form-check mb-3">
+            {{ form.agreed(class="form-check-input") }}
+            <label class="form-check-label">{{ form.agreed.label.text }}</label>
+            {% for e in form.agreed.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+
           <button class="btn btn-primary w-100" type="submit">{{ form.submit.label.text }}</button>
         </form>
       </div>

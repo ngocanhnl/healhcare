@@ -12,3 +12,9 @@ class AppointmentStatus(str, enum.Enum):
     CONFIRMED = "CONFIRMED"
     CANCELLED = "CANCELLED"
 
+
+class PaymentStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+

@@ -8,6 +8,9 @@
       <div class="card-body">
         <h1 class="h5 mb-1">{{ doctor.user.username }}</h1>
         <div class="text-muted">{{ doctor.specialty }}</div>
+        {% if doctor.hospital %}
+          <div class="text-muted small">{{ doctor.hospital.name }}</div>
+        {% endif %}
         <div class="mt-2">
           <span class="badge text-bg-primary">{{ doctor.experience_years }} years experience</span>
         </div>
@@ -42,7 +45,7 @@
                   <td>{{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}</td>
                   <td class="text-end">
                     {% if current_user.is_authenticated and current_user.role.value == 'PATIENT' %}
-                      <a class="btn btn-sm btn-primary" href="{{ url_for('patient.book', schedule_id=s.id) }}">Book</a>
+                      <a class="btn btn-sm btn-primary" href="{{ url_for('patient.book', schedule_id=s.id) }}">Pay & Book</a>
                     {% else %}
                       <a class="btn btn-sm btn-outline-primary" href="{{ url_for('auth.login') }}">Login to book</a>
                     {% endif %}

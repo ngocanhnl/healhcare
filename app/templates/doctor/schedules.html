@@ -37,7 +37,7 @@
               <td class="text-end">
                 <a class="btn btn-sm btn-outline-primary" href="{{ url_for('doctor.schedule_edit', schedule_id=s.id) }}">Edit</a>
                 <form method="post" action="{{ url_for('doctor.schedule_delete', schedule_id=s.id) }}" class="d-inline">
-                  {{ csrf_token() }}
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Delete this slot?')">Delete</button>
                 </form>
               </td>

@@ -53,6 +53,7 @@ def register():
                 password=form.password.data,
                 role=role,
                 specialty=(form.specialty.data or None),
+                hospital_name=(form.hospital_name.data or None),
                 description=(form.description.data or None),
                 experience_years=(form.experience_years.data or 0),
             )

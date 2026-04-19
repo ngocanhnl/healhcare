@@ -41,6 +41,11 @@
               {{ form.specialty(class="form-control", placeholder="e.g. Cardiology") }}
             </div>
             <div class="mb-3">
+              <label class="form-label">{{ form.hospital_name.label }}</label>
+              {{ form.hospital_name(class="form-control", placeholder="e.g. Hospital B") }}
+              {% for e in form.hospital_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="mb-3">
               <label class="form-label">{{ form.experience_years.label }}</label>
               {{ form.experience_years(class="form-control", min="0", max="80") }}
               {% for e in form.experience_years.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}

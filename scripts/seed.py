@@ -1,8 +1,16 @@
 from datetime import date, time, timedelta
+import os
+import sys
+
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from app import create_app
 from app.extensions import db
 from app.models.doctor import Doctor
+from app.models.hospital import Hospital
 from app.models.enums import UserRole
 from app.models.schedule import Schedule
 from app.models.user import User
@@ -28,18 +36,39 @@ def seed():
     d2_user = _get_or_create_user("dr_binh", "doctor123", UserRole.DOCTOR)
     d3_user = _get_or_create_user("dr_chau", "doctor123", UserRole.DOCTOR)
 
-    def get_or_create_doctor(user: User, specialty: str, exp: int, desc: str) -> Doctor:
+    def get_or_create_doctor(user: User, specialty: str, exp: int, desc: str, hospital_name: str | None) -> Doctor:
         doc = db.session.execute(db.select(Doctor).where(Doctor.user_id == user.id)).scalar_one_or_none()
         if doc:
+            if hospital_name and not doc.hospital_id:
+                hospital = db.session.execute(db.select(Hospital).where(Hospital.name == hospital_name)).scalar_one_or_none()
+                if not hospital:
+                    hospital = Hospital(name=hospital_name)
+                    db.session.add(hospital)
+                    db.session.flush()
+                doc.hospital_id = hospital.id
             return doc
-        doc = Doctor(user_id=user.id, specialty=specialty, experience_years=exp, description=desc)
+        hospital_id = None
+        if hospital_name:
+            hospital = db.session.execute(db.select(Hospital).where(Hospital.name == hospital_name)).scalar_one_or_none()
+            if not hospital:
+                hospital = Hospital(name=hospital_name)
+                db.session.add(hospital)
+                db.session.flush()
+            hospital_id = hospital.id
+        doc = Doctor(
+            user_id=user.id,
+            specialty=specialty,
+            experience_years=exp,
+            description=desc,
+            hospital_id=hospital_id,
+        )
         db.session.add(doc)
         db.session.flush()
         return doc
 
-    doc1 = get_or_create_doctor(d1_user, "Cardiology", 8, "Heart specialist with focus on preventive care.")
-    doc2 = get_or_create_doctor(d2_user, "Dermatology", 5, "Skin & allergy clinic, modern treatment methods.")
-    doc3 = get_or_create_doctor(d3_user, "Pediatrics", 10, "Child health and vaccination consultation.")
+    doc1 = get_or_create_doctor(d1_user, "Cardiology", 8, "Heart specialist with focus on preventive care.", "Hospital A")
+    doc2 = get_or_create_doctor(d2_user, "Dermatology", 5, "Skin & allergy clinic, modern treatment methods.", "Clinic B")
+    doc3 = get_or_create_doctor(d3_user, "Pediatrics", 10, "Child health and vaccination consultation.", "Hospital C")
 
     def add_slots(doc: Doctor, start_day_offset: int):
         base = date.today() + timedelta(days=start_day_offset)
