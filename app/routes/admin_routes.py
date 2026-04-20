@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
 from app.extensions import db
@@ -9,6 +9,8 @@ from app.models.payment_transaction import PaymentTransaction
 from app.models.schedule import Schedule
 from app.models.user import User
 from app.services.authz import roles_required
+from app.services.chatbot_service import ChatbotService
+from app.services.forms import DiseaseAdminForm
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -89,4 +91,94 @@ def delete_user(user_id: int):
 
     flash("User deleted successfully.", "success")
     return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.get("/diseases")
+@login_required
+@roles_required(UserRole.ADMIN)
+def diseases_list():
+    q = (request.args.get("q") or "").strip()
+    sql = "SELECT id, name, specialty, (embedding IS NOT NULL) AS has_embedding FROM diseases WHERE 1=1"
+    params: dict[str, object] = {}
+    if q:
+        sql += " AND (name LIKE :q OR specialty LIKE :q)"
+        params["q"] = f"%{q}%"
+    sql += " ORDER BY id DESC"
+    rows = db.session.execute(db.text(sql), params).mappings().all()
+    return render_template("admin/diseases.html", diseases=rows, q=q)
+
+
+@admin_bp.get("/diseases/new")
+@admin_bp.post("/diseases/new")
+@login_required
+@roles_required(UserRole.ADMIN)
+def disease_new():
+    form = DiseaseAdminForm()
+    if form.validate_on_submit():
+        try:
+            uri = (current_app.config.get("SQLALCHEMY_DATABASE_URI") or "").lower()
+            params = {
+                "name": form.name.data.strip(),
+                "symptoms": form.symptoms.data.strip(),
+                "description": form.description.data.strip(),
+                "specialty": form.specialty.data.strip(),
+            }
+            if "postgresql" in uri:
+                row = db.session.execute(
+                    db.text(
+                        """
+                        INSERT INTO diseases (name, symptoms, description, specialty)
+                        VALUES (:name, :symptoms, :description, :specialty)
+                        RETURNING id
+                        """
+                    ),
+                    params,
+                ).first()
+                disease_id = int(row[0]) if row else None
+            else:
+                db.session.execute(
+                    db.text(
+                        """
+                        INSERT INTO diseases (name, symptoms, description, specialty)
+                        VALUES (:name, :symptoms, :description, :specialty)
+                        """
+                    ),
+                    params,
+                )
+                db.session.flush()
+                id_row = db.session.execute(db.text("SELECT LAST_INSERT_ID() AS id")).mappings().first()
+                disease_id = int(id_row["id"]) if id_row and id_row["id"] is not None else None
+            db.session.commit()
+            if not disease_id:
+                flash("Disease saved but could not read new ID for embedding.", "warning")
+            else:
+                try:
+                    ChatbotService.persist_embedding_for_disease(disease_id)
+                    db.session.commit()
+                    flash("Disease created and embedding saved.", "success")
+                except Exception:
+                    db.session.rollback()
+                    flash(
+                        "Disease created. Embedding update failed — run scripts/generate_disease_embeddings.py later.",
+                        "warning",
+                    )
+            return redirect(url_for("admin.diseases_list"))
+        except Exception:
+            db.session.rollback()
+            flash("Could not save disease. Ensure table `diseases` exists (run migration).", "danger")
+    return render_template("admin/disease_form.html", form=form)
+
+
+@admin_bp.post("/diseases/<int:disease_id>/delete")
+@login_required
+@roles_required(UserRole.ADMIN)
+def disease_delete(disease_id: int):
+    try:
+        db.session.execute(db.text("DELETE FROM diseases WHERE id = :id"), {"id": disease_id})
+        db.session.commit()
+        flash("Disease deleted.", "info")
+    except Exception:
+        db.session.rollback()
+        flash("Delete failed.", "danger")
+    return redirect(url_for("admin.diseases_list"))
 
