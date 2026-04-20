@@ -95,7 +95,7 @@
                   <td>
                     {% if schedules_by_date[d] %}
                       {% for s in schedules_by_date[d] %}
-                        {% if s.appointment %}
+                        {% if s.appointment and s.appointment.status.value != 'CANCELLED' %}
                           <span class="badge text-bg-warning me-1">
                             {{ s.start_time.strftime('%H:%M') }}-{{ s.end_time.strftime('%H:%M') }} (Booked)
                           </span>
