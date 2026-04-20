@@ -136,3 +136,11 @@ class DoctorProfileForm(FlaskForm):
     experience_years = IntegerField("Experience (years)", validators=[DataRequired(), NumberRange(min=0, max=80)])
     submit = SubmitField("Save profile")
 
+
+class DiseaseAdminForm(FlaskForm):
+    name = StringField("Disease name", validators=[DataRequired(), Length(min=2, max=255)])
+    symptoms = TextAreaField("Symptoms", validators=[DataRequired(), Length(min=3, max=8000)])
+    description = TextAreaField("Description", validators=[DataRequired(), Length(min=3, max=8000)])
+    specialty = StringField("Specialty", validators=[DataRequired(), Length(min=2, max=120)])
+    submit = SubmitField("Save disease")
+

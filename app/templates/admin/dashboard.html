@@ -2,11 +2,12 @@
 {% block title %}Admin{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-end mb-3">
+<div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-2">
   <div>
     <h1 class="h4 mb-0">Admin dashboard</h1>
     <div class="text-muted">Quick view of all users.</div>
   </div>
+  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.diseases_list') }}">Manage diseases</a>
 </div>
 
 <div class="card shadow-sm">
