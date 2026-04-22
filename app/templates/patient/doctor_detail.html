@@ -1,40 +1,65 @@
 {% extends "base.html" %}
-{% block title %}Doctor profile{% endblock %}
+{% block title %}Doctor Information{% endblock %}
 
 {% block content %}
+<section class="hero-panel p-4 p-lg-5 mb-4">
+  <div class="row align-items-center g-4">
+    <div class="col-lg-8">
+      <span class="eyebrow mb-3">Doctor Profile</span>
+      <h1 class="display-6 fw-bold mb-2">{{ doctor.user.username }}</h1>
+      <p class="mb-3 text-white-50">{{ doctor.specialty }}{% if doctor.hospital %} at {{ doctor.hospital.name }}{% endif %}</p>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="info-pill">{{ doctor.experience_years }} years of experience</span>
+        {% if schedules %}
+          <span class="info-pill">{{ schedules|length }} appointment slots available</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-lg-4 text-lg-end">
+      <a class="btn btn-light px-4" href="{{ url_for('patient.search') }}">Back to Search</a>
+    </div>
+  </div>
+</section>
+
 <div class="row g-3">
   <div class="col-lg-4">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h5 mb-1">{{ doctor.user.username }}</h1>
-        <div class="text-muted">{{ doctor.specialty }}</div>
+    <div class="card h-100">
+      <div class="card-body p-4">
+        <div class="doctor-avatar mb-3">{{ doctor.user.username[:1]|upper }}</div>
+        <div class="soft-badge mb-2">{{ doctor.specialty }}</div>
         {% if doctor.hospital %}
           <div class="text-muted small">{{ doctor.hospital.name }}</div>
         {% endif %}
-        <div class="mt-2">
-          <span class="badge text-bg-primary">{{ doctor.experience_years }} years experience</span>
+        <div class="mt-3">
+          <span class="soft-badge alt">{{ doctor.experience_years }} years of experience</span>
         </div>
         {% if doctor.description %}
           <hr />
-          <div class="small">{{ doctor.description }}</div>
+          <div class="small text-muted">{{ doctor.description }}</div>
         {% endif %}
       </div>
-      <div class="card-footer bg-white">
-        <a class="btn btn-outline-secondary w-100" href="{{ url_for('patient.search') }}">Back to search</a>
+      <div class="card-footer px-4 pb-4 border-0">
+        <div class="summary-card">
+          <div class="small text-muted mb-1">Appointment Status</div>
+          <div class="fw-semibold">Can pay and book appointments directly on the system.</div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="col-lg-8">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h2 class="h6 mb-3">Available slots</h2>
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="mb-3">
+          <h2 class="section-title mb-1">Appointments in the future</h2>
+          <p class="section-subtitle">Choose a time slot that fits your schedule.</p>
+        </div>
         <div class="table-responsive">
-          <table class="table table-sm align-middle">
+          <table class="table align-middle mb-0">
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Time</th>
+                <th>Time slot</th>
                 <th class="text-end">Action</th>
               </tr>
             </thead>
@@ -45,15 +70,15 @@
                   <td>{{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}</td>
                   <td class="text-end">
                     {% if current_user.is_authenticated and current_user.role.value == 'PATIENT' %}
-                      <a class="btn btn-sm btn-primary" href="{{ url_for('patient.book', schedule_id=s.id) }}">Pay & Book</a>
+                      <a class="btn btn-sm btn-primary px-3" href="{{ url_for('patient.book', schedule_id=s.id) }}">Pay and book</a>
                     {% else %}
-                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('auth.login') }}">Login to book</a>
+                      <a class="btn btn-sm btn-outline-primary px-3" href="{{ url_for('auth.login') }}">Login to book</a>
                     {% endif %}
                   </td>
                 </tr>
               {% else %}
                 <tr>
-                  <td colspan="3" class="text-muted">No available slots.</td>
+                  <td colspan="3"><div class="empty-state">The doctor has no appointments in the future.</div></td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -64,4 +89,3 @@
   </div>
 </div>
 {% endblock %}
-
