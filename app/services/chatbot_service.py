@@ -10,6 +10,7 @@ from flask import current_app
 
 from app.extensions import db
 from app.models.doctor import Doctor
+from app.models.disease import Disease
 from app.models.hospital import Hospital
 from app.models.schedule import Schedule
 from app.models.user import User
@@ -171,21 +172,15 @@ class ChatbotService:
 
         else:
             # MySQL - app-layer cosine similarity
-            sql = """
-                SELECT id, name, symptoms, description, specialty, embedding
-                FROM diseases
-                WHERE embedding IS NOT NULL
-            """
-            params: dict[str, object] = {}
+            stmt = db.select(Disease).where(Disease.embedding.is_not(None))
             if specialty:
-                sql += " AND LOWER(specialty) LIKE LOWER(:specialty) "
-                params["specialty"] = f"%{specialty}%"
-            rows = db.session.execute(db.text(sql), params).mappings().all()
+                stmt = stmt.where(Disease.specialty.ilike(f"%{specialty}%"))
+            rows = db.session.execute(stmt).scalars().all()
 
             scored: list[dict] = []
             for r in rows:
                 try:
-                    disease_embedding = json.loads(r["embedding"]) if isinstance(r["embedding"], str) else r["embedding"]
+                    disease_embedding = json.loads(r.embedding) if isinstance(r.embedding, str) else r.embedding
                     if not isinstance(disease_embedding, list):
                         continue
                     score = ChatbotService._cosine_similarity(query_embedding, [float(x) for x in disease_embedding])
@@ -193,11 +188,11 @@ class ChatbotService:
                     continue
                 scored.append(
                     {
-                        "id": int(r["id"]),
-                        "name": r["name"],
-                        "symptoms": r["symptoms"],
-                        "description": r["description"],
-                        "specialty": r["specialty"],
+                        "id": int(r.id),
+                        "name": r.name,
+                        "symptoms": r.symptoms,
+                        "description": r.description,
+                        "specialty": r.specialty,
                         "score": score,
                     }
                 )
@@ -211,19 +206,10 @@ class ChatbotService:
         """Compute embedding from name + symptoms + description and save (MySQL JSON or PG vector)."""
         uri = (current_app.config.get("SQLALCHEMY_DATABASE_URI") or "").lower()
         is_postgres = "postgresql" in uri
-        row = db.session.execute(
-            db.text(
-                """
-                SELECT id, name, symptoms, description
-                FROM diseases
-                WHERE id = :disease_id
-                """
-            ),
-            {"disease_id": disease_id},
-        ).mappings().first()
-        if not row:
+        disease = db.session.get(Disease, disease_id)
+        if not disease:
             return
-        content = f"{row['name']}\nSymptoms: {row['symptoms']}\nDescription: {row['description']}"
+        content = f"{disease.name}\nSymptoms: {disease.symptoms}\nDescription: {disease.description}"
         embedding = ChatbotService.embed_text(content)
         if is_postgres:
             vector_text = ChatbotService._vector_literal(embedding)
@@ -238,16 +224,7 @@ class ChatbotService:
                 {"embedding": vector_text, "disease_id": disease_id},
             )
         else:
-            db.session.execute(
-                db.text(
-                    """
-                    UPDATE diseases
-                    SET embedding = :embedding
-                    WHERE id = :disease_id
-                    """
-                ),
-                {"embedding": json.dumps(embedding), "disease_id": disease_id},
-            )
+            disease.embedding = json.dumps(embedding)
 
     @staticmethod
     def suggest_doctors(specialty: str | None, limit: int = 5) -> list[dict]:

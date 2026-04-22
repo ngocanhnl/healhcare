@@ -32,6 +32,7 @@
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.schedules') }}">Schedules</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.weekly') }}">Weekly shifts</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.appointments') }}">Appointments</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.disease_new') }}">Add disease</a></li>
             {% endif %}
             {% if current_user.is_authenticated and current_user.role.value == 'ADMIN' %}
               <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.dashboard') }}">Admin</a></li>
