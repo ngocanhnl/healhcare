@@ -1,63 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Book appointment{% endblock %}
+{% block title %}Xac nhan thanh toan{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h1 class="h5 mb-2">Thanh toán để đặt lịch</h1>
-        <p class="text-muted mb-3">Sau khi VNPay thanh toán thành công, lịch hẹn sẽ được tạo với trạng thái <strong>PENDING</strong>.</p>
+  <div class="col-xl-10">
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <section class="hero-panel p-4 h-100">
+          <span class="eyebrow mb-3">Final Step</span>
+          <h1 class="h2 fw-bold mb-3">Confirm information before payment</h1>
+          <p class="text-white-50 mb-4">After VNPay succeeds, the appointment will be created with the status <strong class="text-white">PENDING</strong> for the medical facility to process.</p>
 
-        {% if schedule %}
-          <div class="alert alert-light border">
-            <div class="small text-muted">Slot</div>
-            <div class="fw-semibold">
-              {{ schedule.date }} ({{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }})
+          {% if schedule %}
+            <div class="auth-banner-stat mb-3">
+              <div class="small text-white-50 mb-1">Selected Time Slot</div>
+              <div class="fw-semibold">{{ schedule.date }}</div>
+              <div>{{ schedule.start_time.strftime('%H:%M') }} - {{ schedule.end_time.strftime('%H:%M') }}</div>
             </div>
+          {% endif %}
+
+          <div class="auth-banner-stat">
+            <div class="small text-white-50 mb-1">Total Payment</div>
+            <div class="fs-3 fw-bold">{{ amount|round|int }} VND</div>
           </div>
-        {% endif %}
-
-        <div class="alert alert-light border mb-3">
-          <div class="small text-muted">Total</div>
-          <div class="fw-semibold">{{ amount|round|int }} VND</div>
-        </div>
-
-        <form method="post">
-          {{ form.csrf_token }}
-
-          <div class="mb-3">
-            <label class="form-label">{{ form.fullname.label }}</label>
-            {{ form.fullname(class="form-control", placeholder="Full name") }}
-            {% for e in form.fullname.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">{{ form.email.label }}</label>
-            {{ form.email(class="form-control", placeholder="Email") }}
-            {% for e in form.email.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">{{ form.phone.label }}</label>
-            {{ form.phone(class="form-control", placeholder="Phone number") }}
-            {% for e in form.phone.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-          </div>
-
-          <div class="form-check mb-3">
-            {{ form.agreed(class="form-check-input") }}
-            <label class="form-check-label">{{ form.agreed.label.text }}</label>
-            {% for e in form.agreed.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-          </div>
-
-          <button class="btn btn-primary w-100" type="submit">{{ form.submit.label.text }}</button>
-        </form>
+        </section>
       </div>
-      <div class="card-footer bg-white">
-        <a class="btn btn-outline-secondary w-100" href="{{ url_for('patient.search') }}">Back</a>
+      <div class="col-lg-7">
+        <div class="card h-100">
+          <div class="card-body p-4 p-lg-5">
+            <div class="mb-4">
+              <h2 class="section-title mb-1">Booking Information</h2>
+              <p class="section-subtitle">Enter correct information to receive confirmation and transaction reconciliation.</p>
+            </div>
+
+            <form method="post">
+              {{ form.csrf_token }}
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">{{ form.fullname.label }}</label>
+                {{ form.fullname(class="form-control", placeholder="Full Name") }}
+                {% for e in form.fullname.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">{{ form.email.label }}</label>
+                {{ form.email(class="form-control", placeholder="Confirmation Email") }}
+                {% for e in form.email.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label fw-semibold">{{ form.phone.label }}</label>
+                {{ form.phone(class="form-control", placeholder="Phone number") }}
+                {% for e in form.phone.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="summary-card mb-4">
+                <div class="form-check mb-0">
+                  {{ form.agreed(class="form-check-input") }}
+                  <label class="form-check-label" for="{{ form.agreed.id }}">{{ form.agreed.label.text }}</label>
+                </div>
+                {% for e in form.agreed.errors %}<div class="text-danger small mt-2">{{ e }}</div>{% endfor %}
+              </div>
+
+              <button class="btn btn-primary w-100" type="submit">{{ form.submit.label.text }}</button>
+            </form>
+          </div>
+          <div class="card-footer p-4 p-lg-5 pt-0 border-0">
+            <a class="btn btn-outline-secondary w-100" href="{{ url_for('patient.search') }}">Quay lai tra cuu</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
-
