@@ -32,8 +32,11 @@
             <th>ID</th>
             <th>Name</th>
             <th>Specialty</th>
+            <th>Symptoms (preview)</th>
             <th>Embedding</th>
+            {% if current_user.role.value == 'ADMIN' %}
             <th class="text-end">Action</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -42,22 +45,26 @@
               <td>{{ d.id }}</td>
               <td>{{ d.name }}</td>
               <td><span class="badge text-bg-light border">{{ d.specialty }}</span></td>
+              <td class="small text-muted">{{ (d.symptoms or '')[:120] }}{% if (d.symptoms or '')|length > 120 %}...{% endif %}</td>
               <td>
-                {% if d.has_embedding %}
+                {% if d.embedding %}
                   <span class="badge text-bg-success">Yes</span>
                 {% else %}
                   <span class="badge text-bg-warning">No</span>
                 {% endif %}
               </td>
+              {% if current_user.role.value == 'ADMIN' %}
               <td class="text-end">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.disease_edit', disease_id=d.id) }}">Edit</a>
                 <form method="post" action="{{ url_for('admin.disease_delete', disease_id=d.id) }}" class="d-inline" onsubmit="return confirm('Delete this disease?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                 </form>
               </td>
+              {% endif %}
             </tr>
           {% else %}
-            <tr><td colspan="5" class="text-muted p-4">No diseases. Run migration <code>migration_add_diseases_mysql.sql</code> and add records.</td></tr>
+            <tr><td colspan="{% if current_user.role.value == 'ADMIN' %}6{% else %}5{% endif %}" class="text-muted p-4">No diseases yet. Please add records from the management form.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -1,11 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Add disease — Admin{% endblock %}
+{% block title %}{% if mode == 'edit' %}Edit disease — Admin{% else %}Add disease — Admin{% endif %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-end mb-3">
   <div>
-    <h1 class="h4 mb-0">Add disease</h1>
-    <div class="text-muted small">Embedding is generated from <strong>name + symptoms + description</strong> after saving.</div>
+
+    <h1 class="h4 mb-0">{% if mode == 'edit' %}Edit disease{% else %}Add disease{% endif %}</h1>
+    <div class="text-muted small">Embedding được tạo từ <strong>name + symptoms + description</strong> sau khi lưu.</div>
+
   </div>
   <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.diseases_list') }}">Back to list</a>
 </div>
@@ -34,7 +36,7 @@
         {{ form.specialty(class="form-control", placeholder="e.g. ENT, Cardiology") }}
         {% for e in form.specialty.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
       </div>
-      <button type="submit" class="btn btn-primary">{{ form.submit.label.text }}</button>
+      <button type="submit" class="btn btn-primary">{% if mode == 'edit' %}Update disease{% else %}{{ form.submit.label.text }}{% endif %}</button>
     </form>
   </div>
 </div>
