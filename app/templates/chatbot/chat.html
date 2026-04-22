@@ -6,8 +6,8 @@
   <div class="col-lg-8 col-xl-7">
     <div class="d-flex justify-content-between align-items-end mb-3">
       <div>
-        <h1 class="h4 mb-0">Trợ lý triệu chứng (RAG)</h1>
-        <p class="text-muted small mb-0">Mô tả triệu chứng — hệ thống gợi ý hướng khám, không thay thế bác sĩ.</p>
+        <h1 class="h4 mb-0">Symptom Assistant (RAG)</h1>
+        <p class="text-muted small mb-0">Describe symptoms — the system suggests examination directions, not a replacement for doctors.</p>
       </div>
     </div>
 
@@ -20,7 +20,7 @@
           <div class="d-flex justify-content-start">
             <div class="rounded-3 px-3 py-2 bg-white border shadow-sm" style="max-width: 90%;">
               <div class="small text-muted mb-1">Trợ lý</div>
-              <div>Xin chào. Hãy mô tả triệu chứng của bạn (ví dụ: đau đầu, sốt, ho khan…). Tôi sẽ gợi ý chuyên khoa và bác sĩ phù hợp.</div>
+              <div>Hello. Please describe your symptoms (e.g., headache, fever, dry cough…). I will suggest suitable specialties and doctors.</div>
             </div>
           </div>
         </div>
@@ -29,15 +29,15 @@
         <form id="chat-form" class="d-flex gap-2 align-items-end">
           <div class="flex-grow-1">
             <label for="chat-input" class="visually-hidden">Nội dung</label>
-            <textarea id="chat-input" class="form-control" rows="2" placeholder="Nhập triệu chứng..." required></textarea>
+            <textarea id="chat-input" class="form-control" rows="2" placeholder="Enter symptoms..." required></textarea>
           </div>
-          <button type="submit" class="btn btn-primary" id="chat-send">Gửi</button>
+          <button type="submit" class="btn btn-primary" id="chat-send">Send</button>
         </form>
       </div>
     </div>
 
     <p class="small text-muted mt-2 mb-0">
-      Thông tin chỉ mang tính tham khảo. Nếu có dấu hiệu nặng (khó thở, đau ngực, li bì…), hãy đến cơ sở y tế ngay.
+      Information is for reference only. If there are severe symptoms (difficulty breathing, chest pain, lethargy…), please visit a medical facility immediately.
     </p>
   </div>
 </div>

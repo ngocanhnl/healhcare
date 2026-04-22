@@ -1,64 +1,89 @@
 {% extends "base.html" %}
-{% block title %}New appointment{% endblock %}
+{% block title %}Book Appointment{% endblock %}
 
 {% block content %}
-<div class="row g-3 align-items-end mb-3">
-  <div class="col-md-8">
-    <h1 class="h4 mb-0">Book an appointment</h1>
-    <div class="text-muted">Choose hospital, doctor, and a time slot.</div>
+<section class="hero-panel p-4 p-lg-5 mb-4">
+  <div class="row align-items-center g-4">
+    <div class="col-lg-8">
+      <span class="eyebrow mb-3">Booking Process</span>
+      <h1 class="display-6 fw-bold mb-2">Select hospital, doctor, and appointment slot.</h1>
+      <p class="mb-0 text-white-50">The system displays slots by day or the next 7 days.</p>
+    </div>
+    <div class="col-lg-4 text-lg-end">
+      <a class="btn btn-light px-4" href="{{ url_for('patient.dashboard') }}">My Appointments</a>
+    </div>
   </div>
-  <div class="col-md-4 text-md-end">
-    <a class="btn btn-outline-secondary" href="{{ url_for('patient.dashboard') }}">My appointments</a>
+</section>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="metric-card">
+      <div class="small text-muted mb-2">Step 1</div>
+      <div class="metric-value">Filter Information</div>
+      <div class="small text-muted mt-2">Select facility, doctor, and desired date.</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="metric-card">
+      <div class="small text-muted mb-2">Step 2</div>
+      <div class="metric-value">View Available Slots</div>
+      <div class="small text-muted mt-2">The system displays slots by day or the next 7 days.</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="metric-card">
+      <div class="small text-muted mb-2">Step 3</div>
+      <div class="metric-value">Payment for Reservation</div>
+      <div class="small text-muted mt-2">Proceed to confirmation and VNPay payment page.</div>
+    </div>
   </div>
 </div>
 
-<div class="card shadow-sm mb-3">
-  <div class="card-body">
-    <form method="post" class="row g-2 align-items-end" id="filter-form">
-      {{ form.csrf_token }}
-      <div class="col-md-4">
-        <label class="form-label">{{ form.hospital_id.label }}</label>
-        {{ form.hospital_id(class="form-select", id="hospital_id") }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">{{ form.doctor_id.label }}</label>
-        {{ form.doctor_id(class="form-select", id="doctor_id") }}
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">{{ form.date.label }}</label>
-        {{ form.date(class="form-control", id="date") }}
-        <div class="form-text">Optional. Leave empty to show next 7 days.</div>
-      </div>
-      <div class="col-md-2 d-grid">
-        <button class="btn btn-primary" type="submit">{{ form.submit.label.text }}</button>
-      </div>
-    </form>
-  </div>
+<div class="filter-panel p-3 p-lg-4 mb-4">
+  <form method="post" class="row g-3 align-items-end" id="filter-form">
+    {{ form.csrf_token }}
+    <div class="col-md-4">
+      <label class="form-label fw-semibold">{{ form.hospital_id.label }}</label>
+      {{ form.hospital_id(class="form-select", id="hospital_id") }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-semibold">{{ form.doctor_id.label }}</label>
+      {{ form.doctor_id(class="form-select", id="doctor_id") }}
+    </div>
+    <div class="col-md-2">
+      <label class="form-label fw-semibold">{{ form.date.label }}</label>
+      {{ form.date(class="form-control", id="date") }}
+      <div class="form-text">Leave blank to view the next 7 days.</div>
+    </div>
+    <div class="col-md-2 d-grid">
+      <button class="btn btn-primary" type="submit">{{ form.submit.label.text }}</button>
+    </div>
+  </form>
 </div>
 
-<div class="card shadow-sm">
-  <div class="card-body">
+<div class="card">
+  <div class="card-body p-4">
     {% if not form.doctor_id.data %}
-      <div class="alert alert-info mb-0">Select a doctor to see available slots.</div>
+      <div class="empty-state">Please select a doctor to view the available slots.</div>
     {% else %}
       {% if selected_doctor %}
-        <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
           <div>
-            <div class="fw-semibold">{{ selected_doctor.user.username }}</div>
-            <div class="text-muted small">{{ selected_doctor.specialty }}{% if selected_doctor.hospital %} • {{ selected_doctor.hospital.name }}{% endif %}</div>
+            <div class="h5 mb-2">{{ selected_doctor.user.username }}</div>
+            <div class="text-muted small">{{ selected_doctor.specialty }}{% if selected_doctor.hospital %} | {{ selected_doctor.hospital.name }}{% endif %}</div>
           </div>
-          <span class="badge text-bg-primary">{{ selected_doctor.experience_years }} yrs</span>
+          <span class="soft-badge alt">{{ selected_doctor.experience_years }} years of experience</span>
         </div>
       {% endif %}
 
       {% if form.date.data %}
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
+          <table class="table align-middle mb-0">
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Time</th>
-                <th class="text-end">Action</th>
+                <th>Time Slot</th>
+                <th class="text-end">Book</th>
               </tr>
             </thead>
             <tbody>
@@ -67,46 +92,42 @@
                   <td>{{ s.date }}</td>
                   <td>{{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}</td>
                   <td class="text-end">
-                    <a class="btn btn-sm btn-primary" href="{{ url_for('patient.book', schedule_id=s.id) }}">Book</a>
+                    <a class="btn btn-sm btn-primary px-3" href="{{ url_for('patient.book', schedule_id=s.id) }}">Book</a>
                   </td>
                 </tr>
               {% else %}
                 <tr>
-                  <td colspan="3" class="text-muted">No available slots for selected date.</td>
+                  <td colspan="3"><div class="empty-state">No slots available for the selected date.</div></td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       {% else %}
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th style="width: 160px;">Date</th>
-                <th>Slots (next 7 days)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for d in schedules_by_date.keys()|sort %}
-                <tr>
-                  <td>{{ d }}</td>
-                  <td>
+        <div class="row g-3">
+          {% for d in schedules_by_date.keys()|sort %}
+            <div class="col-12">
+              <div class="schedule-row">
+                <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+                  <div>
+                    <div class="fw-semibold">{{ d }}</div>
+                    <div class="small text-muted">Available slots in the next 7 days.</div>
+                  </div>
+                  <div class="text-lg-end">
                     {% for s in schedules_by_date[d] %}
-                      <a class="badge text-bg-success text-decoration-none me-1"
-                         href="{{ url_for('patient.book', schedule_id=s.id) }}">
-                        {{ s.start_time.strftime('%H:%M') }}-{{ s.end_time.strftime('%H:%M') }}
+                      <a class="slot-button" href="{{ url_for('patient.book', schedule_id=s.id) }}">
+                        {{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}
                       </a>
                     {% endfor %}
-                  </td>
-                </tr>
-              {% else %}
-                <tr>
-                  <td colspan="2" class="text-muted">No available slots in the next 7 days.</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="col-12">
+              <div class="empty-state">No slots available.</div>
+            </div>
+          {% endfor %}
         </div>
       {% endif %}
     {% endif %}
@@ -125,4 +146,3 @@
   if (dateInput) dateInput.addEventListener('change', () => form.submit());
 </script>
 {% endblock %}
-
