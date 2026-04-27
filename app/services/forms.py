@@ -10,7 +10,7 @@ from wtforms import (
     TextAreaField,
 )
 from wtforms.fields import DateField, IntegerField, TimeField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, ValidationError
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
 
 from app.extensions import db
 from app.models.user import User
@@ -106,11 +106,45 @@ class WeeklyShiftForm(FlaskForm):
 
 
 class BookingForm(FlaskForm):
-    fullname = StringField("Full name", validators=[DataRequired(), Length(min=2, max=80)])
-    email = StringField("Email", validators=[DataRequired(), Email()])
-    phone = StringField("Phone", validators=[DataRequired(), Length(min=8, max=20)])
+    booking_for = SelectField(
+        "Booking for",
+        choices=[("self", "Myself"), ("relative", "Relative")],
+        validators=[DataRequired()],
+        default="self",
+    )
+    fullname = StringField("Full name", validators=[Optional(), Length(min=2, max=80)])
+    email = StringField("Email", validators=[Optional(), Email(), Length(max=255)])
+    phone = StringField("Phone", validators=[Optional(), Length(min=8, max=20)])
+    symptoms = TextAreaField("Symptoms", validators=[Optional(), Length(max=2000)])
     agreed = BooleanField("I confirm the payment", validators=[DataRequired()])
     submit = SubmitField("Pay with VNPay")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators=extra_validators):
+            return False
+        if not (self.symptoms.data or "").strip():
+            self.symptoms.errors.append("Symptoms are required.")
+            return False
+        if self.booking_for.data == "relative":
+            if not (self.fullname.data or "").strip():
+                self.fullname.errors.append("Full name is required when booking for a relative.")
+                return False
+            if not (self.email.data or "").strip():
+                self.email.errors.append("Email is required when booking for a relative.")
+                return False
+            if not (self.phone.data or "").strip():
+                self.phone.errors.append("Phone is required when booking for a relative.")
+                return False
+            if not (self.symptoms.data or "").strip():
+                self.symptoms.errors.append("Symptoms are required when booking for a relative.")
+                return False
+        return True
+
+
+class PatientContactForm(FlaskForm):
+    email = StringField("Email", validators=[Optional(), Email(), Length(max=255)])
+    phone = StringField("Phone", validators=[Optional(), Length(min=8, max=20)])
+    submit = SubmitField("Update contact info")
 
 
 class NewAppointmentForm(FlaskForm):

@@ -12,6 +12,11 @@ class Appointment(db.Model):
     patient_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     doctor_id = db.Column(db.Integer, db.ForeignKey("doctors.id"), nullable=False, index=True)
     schedule_id = db.Column(db.Integer, db.ForeignKey("schedules.id"), nullable=False, unique=True)
+    booking_for = db.Column(db.String(20), nullable=False, default="self", index=True)
+    contact_fullname = db.Column(db.String(80), nullable=False)
+    contact_email = db.Column(db.String(255), nullable=True)
+    contact_phone = db.Column(db.String(20), nullable=False, index=True)
+    symptoms = db.Column(db.Text, nullable=True)
 
     status = db.Column(db.Enum(AppointmentStatus), nullable=False, default=AppointmentStatus.PENDING, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)

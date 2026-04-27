@@ -49,6 +49,8 @@
             <th>Doctor</th>
             <th>Specialty</th>
             <th>Appointment</th>
+            <th>Booking For</th>
+            <th>Contact Info</th>
             <th>Status</th>
             <th>Created</th>
           </tr>
@@ -59,6 +61,19 @@
               <td>{{ a.doctor.user.username }}</td>
               <td class="text-muted">{{ a.doctor.specialty }}</td>
               <td>{{ a.schedule.date }} {{ a.schedule.start_time.strftime('%H:%M') }}-{{ a.schedule.end_time.strftime('%H:%M') }}</td>
+              <td>
+                {% if a.booking_for == 'self' %}
+                  <span class="soft-badge alt">Myself</span>
+                {% else %}
+                  <span class="soft-badge">Relative</span>
+                {% endif %}
+              </td>
+              <td class="small">
+                <div><strong>Name:</strong> {{ a.contact_fullname or '-' }}</div>
+                <div><strong>Phone:</strong> {{ a.contact_phone or '-' }}</div>
+                <div><strong>Email:</strong> {{ a.contact_email or '-' }}</div>
+                <div><strong>Symptoms:</strong> {{ a.symptoms or '-' }}</div>
+              </td>
               <td>
                 {% if a.status.value == 'PENDING' %}
                   <span class="soft-badge warning">PENDING</span>
@@ -71,7 +86,7 @@
               <td class="text-muted small">{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="5"><div class="empty-state">Ban chua co lich hen nao. Hay bat dau dat lich kham moi.</div></td></tr>
+            <tr><td colspan="7"><div class="empty-state">Ban chua co lich hen nao. Hay bat dau dat lich kham moi.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>
