@@ -12,6 +12,8 @@ USE medical_platform;
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(80) NOT NULL UNIQUE,
+  email VARCHAR(255) NULL,
+  phone VARCHAR(20) NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('PATIENT','DOCTOR','ADMIN') NOT NULL DEFAULT 'PATIENT',
   INDEX idx_users_username (username)
@@ -78,10 +80,17 @@ CREATE TABLE IF NOT EXISTS appointments (
   patient_id INT NOT NULL,
   doctor_id INT NOT NULL,
   schedule_id INT NOT NULL UNIQUE,
+  booking_for VARCHAR(20) NOT NULL DEFAULT 'self',
+  contact_fullname VARCHAR(80) NOT NULL,
+  contact_email VARCHAR(255) NULL,
+  contact_phone VARCHAR(20) NOT NULL,
+  symptoms TEXT NULL,
   status ENUM('PENDING','CONFIRMED','CANCELLED') NOT NULL DEFAULT 'PENDING',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_appointments_patient (patient_id),
   INDEX idx_appointments_doctor (doctor_id),
+  INDEX idx_appointments_booking_for (booking_for),
+  INDEX idx_appointments_contact_phone (contact_phone),
   INDEX idx_appointments_status (status),
   INDEX idx_appointments_created (created_at),
   CONSTRAINT fk_appointments_patient FOREIGN KEY (patient_id) REFERENCES users(id)

@@ -11,7 +11,7 @@ from app.models.user import User
 from app.services.appointment_service import AppointmentService
 from app.services.doctor_service import DoctorService
 from app.services.vnpay_service import VnpayService
-from app.services.forms import BookingForm, NewAppointmentForm, SearchDoctorForm
+from app.services.forms import BookingForm, NewAppointmentForm, PatientContactForm, SearchDoctorForm
 from app.services.authz import roles_required
 
 patient_bp = Blueprint("patient", __name__)
@@ -186,7 +186,98 @@ def book(schedule_id: int):
     if schedule is None:
         abort(404)
 
+    self_info = {
+        "fullname": current_user.username,
+        "email": (getattr(current_user, "email", "") or "").strip(),
+        "phone": (getattr(current_user, "phone", "") or "").strip(),
+        "symptoms": "",
+    }
+    self_missing_email = not self_info["email"]
+    self_missing_phone = not self_info["phone"]
+    self_requires_contact = self_missing_email or self_missing_phone
+
+    if request.method == "GET":
+        form.booking_for.data = "self"
+        form.fullname.data = self_info["fullname"]
+        form.email.data = self_info["email"]
+        form.phone.data = self_info["phone"]
+        form.symptoms.data = self_info["symptoms"]
+
     if form.validate_on_submit():
+        booking_for = form.booking_for.data
+        contact_fullname = (form.fullname.data or "").strip()
+        contact_email = (form.email.data or "").strip() or None
+        contact_phone = (form.phone.data or "").strip()
+        symptoms = (form.symptoms.data or "").strip() or None
+
+        if booking_for == "self":
+            contact_fullname = self_info["fullname"]
+            if self_missing_email:
+                contact_email = (form.email.data or "").strip() or None
+            else:
+                contact_email = self_info["email"] or None
+            if self_missing_phone:
+                contact_phone = (form.phone.data or "").strip()
+            else:
+                contact_phone = self_info["phone"] or ""
+
+            if not contact_email:
+                form.email.errors.append("Vui long bo sung email de dat lich cho ban than.")
+                return render_template(
+                    "patient/booking.html",
+                    form=form,
+                    schedule_id=schedule_id,
+                    amount=amount,
+                    schedule=schedule,
+                    self_info=self_info,
+                    self_missing_email=self_missing_email,
+                    self_missing_phone=self_missing_phone,
+                    self_requires_contact=self_requires_contact,
+                )
+            if not contact_phone:
+                form.phone.errors.append("Vui long bo sung so dien thoai de dat lich cho ban than.")
+                return render_template(
+                    "patient/booking.html",
+                    form=form,
+                    schedule_id=schedule_id,
+                    amount=amount,
+                    schedule=schedule,
+                    self_info=self_info,
+                    self_missing_email=self_missing_email,
+                    self_missing_phone=self_missing_phone,
+                    self_requires_contact=self_requires_contact,
+                )
+
+            # Persist missing contact information to the logged-in account.
+            if self_missing_email:
+                current_user.email = contact_email
+                self_info["email"] = contact_email
+            if self_missing_phone:
+                current_user.phone = contact_phone
+                self_info["phone"] = contact_phone
+
+        if AppointmentService.has_duplicate_person_booking(
+            patient_id=patient_id,
+            booking_for=booking_for,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
+            date_value=schedule.date,
+            start_time=schedule.start_time,
+            end_time=schedule.end_time,
+        ):
+            flash("Người được đặt đã có lịch hẹn trùng khung giờ này.", "danger")
+            return render_template(
+                "patient/booking.html",
+                form=form,
+                schedule_id=schedule_id,
+                amount=amount,
+                schedule=schedule,
+                self_info=self_info,
+                self_missing_email=self_missing_email,
+                self_missing_phone=self_missing_phone,
+                self_requires_contact=self_requires_contact,
+            )
+
         ip_addr = (
             request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
             or request.remote_addr
@@ -201,6 +292,11 @@ def book(schedule_id: int):
         transaction = PaymentTransaction(
             patient_id=patient_id,
             schedule_id=schedule_id,
+            booking_for=booking_for,
+            contact_fullname=contact_fullname,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
+            symptoms=symptoms,
             vnp_txn_ref=txn_ref,
             amount_vnd=int(amount),
             status=PaymentStatus.PENDING,
@@ -233,12 +329,24 @@ def book(schedule_id: int):
                 schedule_id=schedule_id,
                 amount=amount,
                 schedule=schedule,
+                self_info=self_info,
+                self_missing_email=self_missing_email,
+                self_missing_phone=self_missing_phone,
+                self_requires_contact=self_requires_contact,
             )
 
         return redirect(payment_url)
 
     return render_template(
-        "patient/booking.html", form=form, schedule_id=schedule_id, amount=amount, schedule=schedule
+        "patient/booking.html",
+        form=form,
+        schedule_id=schedule_id,
+        amount=amount,
+        schedule=schedule,
+        self_info=self_info,
+        self_missing_email=self_missing_email,
+        self_missing_phone=self_missing_phone,
+        self_requires_contact=self_requires_contact,
     )
 
 
@@ -277,14 +385,19 @@ def vnpay_return():
             AppointmentService.book(
                 patient_id=transaction.patient_id,
                 schedule_id=transaction.schedule_id,
+                booking_for=transaction.booking_for,
+                contact_fullname=transaction.contact_fullname,
+                contact_email=transaction.contact_email,
+                contact_phone=transaction.contact_phone,
+                symptoms=transaction.symptoms,
                 status=AppointmentStatus.PENDING,
             )
             transaction.status = PaymentStatus.SUCCESS
             db.session.commit()
-        except ValueError:
+        except ValueError as e:
             transaction.status = PaymentStatus.FAILED
             db.session.commit()
-            flash("Payment received but slot is no longer available.", "danger")
+            flash(f"Payment received but appointment could not be created: {e}", "danger")
             return redirect(url_for("patient.dashboard"))
 
         flash("Payment successful. Appointment created (PENDING).", "success")
@@ -306,10 +419,22 @@ def dashboard():
 
 
 @patient_bp.get("/patient/profile")
+@patient_bp.post("/patient/profile")
 @login_required
 @roles_required(UserRole.PATIENT)
 def profile():
     patient_id = _target_patient_id()
     appts = AppointmentService.list_for_patient(patient_id=patient_id)
-    return render_template("patient/profile.html", appointments=appts)
+    form = PatientContactForm()
+    if request.method == "GET":
+        form.email.data = (getattr(current_user, "email", "") or "").strip()
+        form.phone.data = (getattr(current_user, "phone", "") or "").strip()
+    if form.validate_on_submit():
+        current_user.email = (form.email.data or "").strip() or None
+        current_user.phone = (form.phone.data or "").strip() or None
+        db.session.commit()
+        flash("Cap nhat email/so dien thoai thanh cong.", "success")
+        return redirect(url_for("patient.profile"))
+
+    return render_template("patient/profile.html", appointments=appts, form=form)
 
