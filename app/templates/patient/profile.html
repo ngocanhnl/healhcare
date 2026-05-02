@@ -55,7 +55,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
       <div>
         <h2 class="section-title mb-1">Cap nhat thong tin lien he</h2>
-        <p class="section-subtitle">Email va so dien thoai dung de nhan xac nhan, doi soat giao dich.</p>
+        <p class="section-subtitle">Email va so dien thoai dung de nhan xac nhan, doi soat giao dich va lien ket lich dat ho.</p>
       </div>
     </div>
     <form method="post" class="row g-3">
@@ -111,6 +111,9 @@
                   <span class="soft-badge alt">Myself</span>
                 {% else %}
                   <span class="soft-badge">Relative</span>
+                  {% if current_user.phone and a.contact_phone == current_user.phone and a.patient_id != current_user.id %}
+                    <div class="small text-muted mt-1">Booked on your behalf</div>
+                  {% endif %}
                 {% endif %}
               </td>
               <td class="small">

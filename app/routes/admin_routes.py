@@ -11,7 +11,7 @@ from app.models.schedule import Schedule
 from app.models.user import User
 from app.services.authz import roles_required
 from app.services.chatbot_service import ChatbotService
-from app.services.forms import DiseaseAdminForm
+from app.services.forms import DiseaseAdminForm, HospitalAdminForm
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -20,6 +20,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 @login_required
 @roles_required(UserRole.ADMIN)
 def dashboard():
+    hospital_form = HospitalAdminForm()
     username = (request.args.get("username") or "").strip()
     doctor_name = (request.args.get("doctor_name") or "").strip()
     patient_name = (request.args.get("patient_name") or "").strip()
@@ -43,6 +44,7 @@ def dashboard():
         stmt = stmt.where(User.role == UserRole.DOCTOR, Doctor.specialty.ilike(f"%{specialty}%"))
 
     users = list(db.session.execute(stmt.order_by(User.id.desc())).scalars().all())
+    hospitals = list(db.session.execute(db.select(Hospital).order_by(Hospital.name.asc())).scalars().all())
     filters = {
         "username": username,
         "doctor_name": doctor_name,
@@ -51,7 +53,38 @@ def dashboard():
         "hospital_name": hospital_name,
         "specialty": specialty,
     }
-    return render_template("admin/dashboard.html", users=users, filters=filters)
+    return render_template(
+        "admin/dashboard.html",
+        users=users,
+        filters=filters,
+        hospital_form=hospital_form,
+        hospitals=hospitals,
+    )
+
+
+@admin_bp.post("/hospitals/create")
+@login_required
+@roles_required(UserRole.ADMIN)
+def create_hospital():
+    form = HospitalAdminForm()
+    if not form.validate_on_submit():
+        flash("Hospital name is required (2-160 chars).", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    hospital_name = form.name.data.strip()
+    existing = db.session.execute(db.select(Hospital.id).where(Hospital.name == hospital_name)).scalar_one_or_none()
+    if existing is not None:
+        flash("Hospital already exists.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    try:
+        db.session.add(Hospital(name=hospital_name))
+        db.session.commit()
+        flash("Hospital created successfully.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Could not create hospital.", "danger")
+    return redirect(url_for("admin.dashboard"))
 
 
 @admin_bp.post("/users/<int:user_id>/delete")

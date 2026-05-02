@@ -5,13 +5,16 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models.enums import AppointmentStatus, PaymentStatus, UserRole
+from app.models.appointment import Appointment
+from app.models.doctor_review import DoctorReview
 from app.models.payment_transaction import PaymentTransaction
 from app.models.schedule import Schedule
 from app.models.user import User
 from app.services.appointment_service import AppointmentService
 from app.services.doctor_service import DoctorService
+from app.services.review_service import DoctorReviewService
 from app.services.vnpay_service import VnpayService
-from app.services.forms import BookingForm, NewAppointmentForm, PatientContactForm, SearchDoctorForm
+from app.services.forms import BookingForm, DoctorReviewForm, NewAppointmentForm, PatientContactForm, SearchDoctorForm
 from app.services.authz import roles_required
 
 patient_bp = Blueprint("patient", __name__)
@@ -43,16 +46,8 @@ def search():
     doctor_name = request.args.get("doctor_name") if request.method == "GET" else form.doctor_name.data
     hospital_name = request.args.get("hospital_name") if request.method == "GET" else form.hospital_name.data
     specialty = request.args.get("specialty") if request.method == "GET" else form.specialty.data
-    min_exp = (
-        request.args.get("min_experience_years", type=int)
-        if request.method == "GET"
-        else form.min_experience_years.data
-    )
-    max_exp = (
-        request.args.get("max_experience_years", type=int)
-        if request.method == "GET"
-        else form.max_experience_years.data
-    )
+    result_hospital = request.args.get("result_hospital") if request.method == "GET" else None
+    result_specialty = request.args.get("result_specialty") if request.method == "GET" else None
 
     if request.method == "POST" and form.validate_on_submit():
         params: dict[str, str | int] = {}
@@ -65,26 +60,46 @@ def search():
         specialty_value = (form.specialty.data or "").strip()
         if specialty_value:
             params["specialty"] = specialty_value
-        if form.min_experience_years.data is not None:
-            params["min_experience_years"] = int(form.min_experience_years.data)
-        if form.max_experience_years.data is not None:
-            params["max_experience_years"] = int(form.max_experience_years.data)
         return redirect(url_for("patient.search", **params))
 
     if request.method == "GET":
+        doctor_name = (doctor_name or "").strip()
+        hospital_name = (hospital_name or "").strip()
+        specialty = (specialty or "").strip()
+        result_hospital = (result_hospital or "").strip()
+        result_specialty = (result_specialty or "").strip()
         form.doctor_name.data = (doctor_name or "").strip()
         form.hospital_name.data = (hospital_name or "").strip()
         form.specialty.data = (specialty or "").strip()
-        form.min_experience_years.data = min_exp
-        form.max_experience_years.data = max_exp
+
+    if not doctor_name:
+        result_hospital = ""
+        result_specialty = ""
+
+    base_params: dict[str, str | int] = {}
+    if doctor_name:
+        base_params["doctor_name"] = doctor_name
+    if hospital_name:
+        base_params["hospital_name"] = hospital_name
+    if specialty:
+        base_params["specialty"] = specialty
 
     doctors = DoctorService.search_doctors(
         doctor_name=doctor_name,
         hospital_name=hospital_name,
         specialty=specialty,
-        min_experience_years=min_exp,
-        max_experience_years=max_exp,
+        exact_hospital_name=result_hospital or None,
+        exact_specialty=result_specialty or None,
     )
+
+    name_search_doctors = []
+    if doctor_name:
+        name_search_doctors = DoctorService.search_doctors(
+            doctor_name=doctor_name,
+        )
+    filtered_hospitals = sorted({d.hospital.name for d in name_search_doctors if d.hospital and d.hospital.name})
+    filtered_specialties = sorted({d.specialty for d in name_search_doctors if d.specialty})
+
     specialties = DoctorService.list_specialties()
     hospitals = DoctorService.list_hospitals()
     doctor_names = DoctorService.list_doctor_names()
@@ -95,6 +110,11 @@ def search():
         specialties=specialties,
         hospitals=hospitals,
         doctor_names=doctor_names,
+        filtered_hospitals=filtered_hospitals,
+        filtered_specialties=filtered_specialties,
+        selected_result_hospital=result_hospital or "",
+        selected_result_specialty=result_specialty or "",
+        base_query_params=base_params,
         selected_specialty=(specialty or "").strip(),
     )
 
@@ -105,7 +125,17 @@ def doctor_detail(doctor_id: int):
     if not doctor:
         abort(404)
     schedules = DoctorService.get_available_schedules(doctor_id=doctor_id, from_date=date.today())
-    return render_template("patient/doctor_detail.html", doctor=doctor, schedules=schedules)
+    rating_avg, rating_count, rating_avg_rounded = DoctorReviewService.get_rating_summary_for_doctor(doctor_id=doctor.id)
+    reviews = DoctorReviewService.list_reviews_for_doctor(doctor_id=doctor.id, limit=10)
+    return render_template(
+        "patient/doctor_detail.html",
+        doctor=doctor,
+        schedules=schedules,
+        rating_avg=rating_avg,
+        rating_count=rating_count,
+        rating_avg_rounded=rating_avg_rounded,
+        reviews=reviews,
+    )
 
 
 @patient_bp.get("/appointments/new")
@@ -179,12 +209,14 @@ def appointment_new():
 @roles_required(UserRole.PATIENT)
 def book(schedule_id: int):
     form = BookingForm()
-    amount = 500000.0  # Amount in VND (demo)
     schedule = Schedule.query.get(schedule_id)
     patient_id = _target_patient_id()
 
     if schedule is None:
         abort(404)
+
+    # Payment amount is based on the selected doctor's booking price.
+    amount = float(getattr(schedule.doctor, "price_vnd", None) or 500000)
 
     self_info = {
         "fullname": current_user.username,
@@ -415,7 +447,95 @@ def vnpay_return():
 def dashboard():
     patient_id = _target_patient_id()
     appts = AppointmentService.list_for_patient(patient_id=patient_id)
-    return render_template("patient/dashboard.html", appointments=appts)
+    appt_ids = [a.id for a in appts]
+    schedule_ids = [a.schedule_id for a in appts]
+
+    paid_schedule_ids: set[int] = set()
+    if schedule_ids:
+        paid_schedule_ids = set(
+            db.session.execute(
+                db.select(PaymentTransaction.schedule_id)
+                .where(
+                    PaymentTransaction.patient_id == patient_id,
+                    PaymentTransaction.schedule_id.in_(schedule_ids),
+                    PaymentTransaction.status == PaymentStatus.SUCCESS,
+                )
+            ).scalars().all()
+        )
+
+    reviewed_appointment_ids: set[int] = set()
+    if appt_ids:
+        reviewed_appointment_ids = set(
+            db.session.execute(
+                db.select(DoctorReview.appointment_id).where(
+                    DoctorReview.patient_id == patient_id, DoctorReview.appointment_id.in_(appt_ids)
+                )
+            ).scalars().all()
+        )
+
+    review_meta: dict[int, dict[str, bool]] = {}
+    for a in appts:
+        paid = a.schedule_id in paid_schedule_ids
+        reviewed = a.id in reviewed_appointment_ids
+        can_review = paid and (not reviewed) and a.status.value != "CANCELLED"
+        review_meta[a.id] = {"can_review": bool(can_review), "reviewed": bool(reviewed)}
+
+    return render_template("patient/dashboard.html", appointments=appts, review_meta=review_meta)
+
+
+@patient_bp.get("/appointments/<int:appointment_id>/review")
+@patient_bp.post("/appointments/<int:appointment_id>/review")
+@login_required
+@roles_required(UserRole.PATIENT)
+def appointment_review(appointment_id: int):
+    appt = db.session.get(Appointment, appointment_id)
+    if not appt:
+        abort(404)
+
+    if current_user.role != UserRole.ADMIN and appt.patient_id != current_user.id:
+        abort(404)
+
+    patient_id = appt.patient_id
+
+    existing = DoctorReviewService.get_review_by_appointment_id(appointment_id=appointment_id)
+    paid = (
+        db.session.execute(
+            db.select(PaymentTransaction.id)
+            .where(
+                PaymentTransaction.patient_id == patient_id,
+                PaymentTransaction.schedule_id == appt.schedule_id,
+                PaymentTransaction.status == PaymentStatus.SUCCESS,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )
+
+    if existing:
+        flash("Bạn đã đánh giá lịch hẹn này rồi.", "info")
+        return redirect(url_for("patient.dashboard"))
+
+    if not paid or appt.status.value == "CANCELLED":
+        flash("Bạn chỉ có thể đánh giá bác sĩ sau khi thanh toán thành công.", "warning")
+        return redirect(url_for("patient.dashboard"))
+
+    form = DoctorReviewForm()
+    if request.method == "POST" and form.validate_on_submit():
+        try:
+            DoctorReviewService.create_review(
+                appointment_id=appointment_id,
+                patient_id=patient_id,
+                stars=form.stars.data,
+                comment=form.comment.data,
+            )
+            flash("Cảm ơn bạn đã đánh giá!", "success")
+            return redirect(url_for("patient.dashboard"))
+        except (ValueError, PermissionError) as e:
+            flash(str(e), "danger")
+        except Exception:
+            flash("Gửi đánh giá thất bại, vui lòng thử lại.", "danger")
+
+    return render_template("patient/appointment_review.html", appointment=appt, form=form)
 
 
 @patient_bp.get("/patient/profile")

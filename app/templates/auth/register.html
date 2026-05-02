@@ -43,6 +43,19 @@
 
             <div class="row">
               <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">{{ form.email.label }}</label>
+                {{ form.email(class="form-control", placeholder="name@example.com") }}
+                {% for e in form.email.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">{{ form.phone.label }}</label>
+                {{ form.phone(class="form-control", placeholder="So dien thoai") }}
+                {% for e in form.phone.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-semibold">{{ form.password.label }}</label>
                 {{ form.password(class="form-control", placeholder="Minimum 6 characters") }}
                 {% for e in form.password.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
@@ -61,9 +74,9 @@
                 {{ form.specialty(class="form-control", placeholder="VD: Tim mach") }}
               </div>
               <div class="mb-3">
-                <label class="form-label fw-semibold">{{ form.hospital_name.label }}</label>
-                {{ form.hospital_name(class="form-control", placeholder="VD: Benh vien Da khoa") }}
-                {% for e in form.hospital_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                <label class="form-label fw-semibold">{{ form.hospital_id.label }}</label>
+                {{ form.hospital_id(class="form-select") }}
+                {% for e in form.hospital_id.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
               </div>
               <div class="mb-3">
                 <label class="form-label fw-semibold">{{ form.experience_years.label }}</label>

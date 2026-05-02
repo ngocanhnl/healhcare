@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS doctors (
   hospital_id INT NULL,
   description TEXT NULL,
   experience_years INT NOT NULL DEFAULT 0,
+  price_vnd INT NOT NULL DEFAULT 500000,
   INDEX idx_doctors_specialty (specialty),
   INDEX idx_doctors_hospital (hospital_id),
   CONSTRAINT fk_doctors_user FOREIGN KEY (user_id) REFERENCES users(id)

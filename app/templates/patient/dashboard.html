@@ -40,7 +40,7 @@
   <div class="card-body p-4">
     <div class="mb-3">
       <h2 class="section-title mb-1">Appointment List</h2>
-      <p class="section-subtitle">Updated based on the current account's booking history.</p>
+      <p class="section-subtitle">Bao gom lich ban tu dat va lich nguoi khac da dat ho theo so dien thoai cua tai khoan.</p>
     </div>
     <div class="table-responsive">
       <table class="table align-middle mb-0">
@@ -52,6 +52,7 @@
             <th>Booking For</th>
             <th>Contact Info</th>
             <th>Status</th>
+            <th class="text-end">Rating</th>
             <th>Created</th>
           </tr>
         </thead>
@@ -66,6 +67,9 @@
                   <span class="soft-badge alt">Myself</span>
                 {% else %}
                   <span class="soft-badge">Relative</span>
+                  {% if current_user.phone and a.contact_phone == current_user.phone and a.patient_id != current_user.id %}
+                    <div class="small text-muted mt-1">Booked on your behalf</div>
+                  {% endif %}
                 {% endif %}
               </td>
               <td class="small">
@@ -83,10 +87,19 @@
                   <span class="soft-badge">CANCELLED</span>
                 {% endif %}
               </td>
+              <td class="text-end">
+                {% if review_meta[a.id].can_review %}
+                  <a class="btn btn-sm btn-primary px-3" href="{{ url_for('patient.appointment_review', appointment_id=a.id) }}">Đánh giá</a>
+                {% elif review_meta[a.id].reviewed %}
+                  <span class="soft-badge alt">Đã đánh giá</span>
+                {% else %}
+                  <span class="soft-badge">Chưa thể đánh giá</span>
+                {% endif %}
+              </td>
               <td class="text-muted small">{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="7"><div class="empty-state">Ban chua co lich hen nao. Hay bat dau dat lich kham moi.</div></td></tr>
+            <tr><td colspan="8"><div class="empty-state">Ban chua co lich hen nao. Hay bat dau dat lich kham moi.</div></td></tr>
           {% endfor %}
         </tbody>
       </table>
