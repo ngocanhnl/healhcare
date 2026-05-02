@@ -24,4 +24,5 @@ class Appointment(db.Model):
     patient = db.relationship("User", back_populates="patient_appointments", foreign_keys=[patient_id])
     doctor = db.relationship("Doctor", back_populates="appointments", foreign_keys=[doctor_id])
     schedule = db.relationship("Schedule", back_populates="appointment", foreign_keys=[schedule_id])
+    review = db.relationship("DoctorReview", back_populates="appointment", uselist=False, cascade="all, delete-orphan")
 

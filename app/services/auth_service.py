@@ -12,14 +12,21 @@ class AuthService:
     def register_user(
         *,
         username: str,
+        email: str,
+        phone: str,
         password: str,
         role: UserRole,
         specialty: str | None = None,
-        hospital_name: str | None = None,
+        hospital_id: int | None = None,
         description: str | None = None,
         experience_years: int | None = None,
     ) -> User:
-        user = User(username=username, role=role)
+        user = User(
+            username=username,
+            email=(email or "").strip(),
+            phone=(phone or "").strip(),
+            role=role,
+        )
         user.set_password(password)
         db.session.add(user)
         db.session.flush()
@@ -27,21 +34,15 @@ class AuthService:
         if role == UserRole.DOCTOR:
             if not specialty:
                 raise ValueError("Specialty is required for DOCTOR")
-            hospital_id: int | None = None
-            hospital_name_value = (hospital_name or "").strip()
-            if hospital_name_value:
-                hospital = db.session.execute(
-                    db.select(Hospital).where(Hospital.name == hospital_name_value)
-                ).scalar_one_or_none()
-                if not hospital:
-                    hospital = Hospital(name=hospital_name_value)
-                    db.session.add(hospital)
-                    db.session.flush()
-                hospital_id = hospital.id
+            if not hospital_id:
+                raise ValueError("Hospital selection is required for DOCTOR")
+            hospital = db.session.get(Hospital, int(hospital_id))
+            if not hospital:
+                raise ValueError("Selected hospital does not exist")
             doc = Doctor(
                 user_id=user.id,
                 specialty=specialty.strip(),
-                hospital_id=hospital_id,
+                hospital_id=hospital.id,
                 description=(description or "").strip() or None,
                 experience_years=int(experience_years or 0),
             )

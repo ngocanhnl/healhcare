@@ -17,7 +17,12 @@ class ScheduleService:
 
     @staticmethod
     def create_schedule(
-        *, doctor_id: int, date_value: date, start_time_value: time, end_time_value: time, is_available: bool
+        *,
+        doctor_id: int,
+        date_value: date,
+        start_time_value: time,
+        end_time_value: time,
+        is_available: bool,
     ) -> Schedule:
         schedule = Schedule(
             doctor_id=doctor_id,
@@ -35,14 +40,16 @@ class ScheduleService:
         return schedule
 
     @staticmethod
-    def ensure_next_days_from_weekly_shifts(*, doctor_id: int, days_ahead: int = 7) -> int:
-        if days_ahead < 1:
-            return 0
-
+    def ensure_week_schedules_from_templates(*, doctor_id: int, week_start: date) -> int:
+        week_end = week_start + timedelta(days=6)
         shifts = list(
             db.session.execute(
                 db.select(WeeklyShift)
-                .where(WeeklyShift.doctor_id == doctor_id, WeeklyShift.is_active.is_(True))
+                .where(
+                    WeeklyShift.doctor_id == doctor_id,
+                    WeeklyShift.week_start == week_start,
+                    WeeklyShift.is_active.is_(True),
+                )
                 .order_by(WeeklyShift.weekday, WeeklyShift.start_time)
             ).scalars().all()
         )
@@ -50,38 +57,31 @@ class ScheduleService:
             return 0
 
         created = 0
-        start_date = date.today()
-        end_date = start_date + timedelta(days=days_ahead - 1)
-
         existing_rows = db.session.execute(
             db.select(Schedule.date, Schedule.start_time, Schedule.end_time).where(
                 Schedule.doctor_id == doctor_id,
-                Schedule.date >= start_date,
-                Schedule.date <= end_date,
+                Schedule.date >= week_start,
+                Schedule.date <= week_end,
             )
         ).all()
         existing = {(r[0], r[1], r[2]) for r in existing_rows}
 
-        for i in range(days_ahead):
-            d = start_date + timedelta(days=i)
-            weekday = d.weekday()
-            for sh in shifts:
-                if sh.weekday != weekday:
-                    continue
-                key = (d, sh.start_time, sh.end_time)
-                if key in existing:
-                    continue
-                db.session.add(
-                    Schedule(
-                        doctor_id=doctor_id,
-                        date=d,
-                        start_time=sh.start_time,
-                        end_time=sh.end_time,
-                        is_available=True,
-                    )
+        for sh in shifts:
+            d = week_start + timedelta(days=sh.weekday)
+            key = (d, sh.start_time, sh.end_time)
+            if key in existing:
+                continue
+            db.session.add(
+                Schedule(
+                    doctor_id=doctor_id,
+                    date=d,
+                    start_time=sh.start_time,
+                    end_time=sh.end_time,
+                    is_available=True,
                 )
-                created += 1
-                existing.add(key)
+            )
+            created += 1
+            existing.add(key)
 
         if created:
             try:
@@ -89,6 +89,32 @@ class ScheduleService:
             except IntegrityError:
                 db.session.rollback()
         return created
+
+    @staticmethod
+    def delete_week_template_and_schedule(*, shift: WeeklyShift) -> tuple[bool, str | None]:
+        schedule_date = shift.week_start + timedelta(days=shift.weekday)
+        schedule = db.session.execute(
+            db.select(Schedule).where(
+                Schedule.doctor_id == shift.doctor_id,
+                Schedule.date == schedule_date,
+                Schedule.start_time == shift.start_time,
+                Schedule.end_time == shift.end_time,
+            )
+        ).scalar_one_or_none()
+
+        kept_booked_schedule = False
+        if schedule:
+            if schedule.appointment:
+                kept_booked_schedule = True
+            else:
+                db.session.delete(schedule)
+
+        db.session.delete(shift)
+        db.session.commit()
+
+        if kept_booked_schedule:
+            return True, "Weekly template deleted, but the booked slot in this week was kept."
+        return False, None
 
     @staticmethod
     def update_schedule(

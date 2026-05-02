@@ -45,15 +45,18 @@ def register():
         return _redirect_after_login()
 
     form = RegisterForm()
+    form.set_hospital_choices()
     if form.validate_on_submit():
         role = UserRole(form.role.data)
         try:
             AuthService.register_user(
                 username=form.username.data.strip(),
+                email=form.email.data.strip(),
+                phone=form.phone.data.strip(),
                 password=form.password.data,
                 role=role,
                 specialty=(form.specialty.data or None),
-                hospital_name=(form.hospital_name.data or None),
+                hospital_id=(form.hospital_id.data or None),
                 description=(form.description.data or None),
                 experience_years=(form.experience_years.data or 0),
             )

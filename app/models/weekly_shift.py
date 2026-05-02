@@ -6,6 +6,7 @@ class WeeklyShift(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     doctor_id = db.Column(db.Integer, db.ForeignKey("doctors.id"), nullable=False, index=True)
+    week_start = db.Column(db.Date, nullable=False, index=True)
 
     # Monday=0 ... Sunday=6 (datetime.date.weekday)
     weekday = db.Column(db.Integer, nullable=False, index=True)
@@ -16,6 +17,6 @@ class WeeklyShift(db.Model):
     doctor = db.relationship("Doctor", back_populates="weekly_shifts")
 
     __table_args__ = (
-        db.UniqueConstraint("doctor_id", "weekday", "start_time", "end_time", name="uq_weekly_shift"),
+        db.UniqueConstraint("doctor_id", "week_start", "weekday", "start_time", "end_time", name="uq_weekly_shift"),
     )
 

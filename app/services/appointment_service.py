@@ -1,4 +1,5 @@
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models.appointment import Appointment
@@ -79,23 +80,24 @@ class AppointmentService:
         if booking_for == "self":
             stmt = stmt.where(Appointment.patient_id == patient_id, Appointment.booking_for == "self")
         else:
-            email_value = (contact_email or "").strip()
-            if email_value:
-                stmt = stmt.where(
-                    Appointment.booking_for == "relative",
-                    Appointment.contact_phone == contact_phone,
-                    Appointment.contact_email == email_value,
-                )
-            else:
-                stmt = stmt.where(Appointment.booking_for == "relative", Appointment.contact_phone == contact_phone)
+            stmt = stmt.where(Appointment.booking_for == "relative", Appointment.contact_phone == contact_phone)
         existing_id = db.session.execute(stmt.limit(1)).scalar_one_or_none()
         return existing_id is not None
 
     @staticmethod
     def list_for_patient(*, patient_id: int) -> list[Appointment]:
+        from app.models.user import User
+
+        patient = db.session.get(User, patient_id)
+        phone_value = (getattr(patient, "phone", "") or "").strip() if patient else ""
         stmt = (
             db.select(Appointment)
-            .where(Appointment.patient_id == patient_id)
+            .where(
+                or_(
+                    Appointment.patient_id == patient_id,
+                    Appointment.contact_phone == phone_value if phone_value else False,
+                )
+            )
             .order_by(Appointment.created_at.desc())
         )
         return list(db.session.execute(stmt).scalars().all())

@@ -10,6 +10,30 @@
   <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.diseases_list') }}">Manage diseases</a>
 </div>
 
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Hospital management</h2>
+    <form method="post" action="{{ url_for('admin.create_hospital') }}" class="row g-2 align-items-end mb-3">
+      {{ hospital_form.csrf_token }}
+      <div class="col-md-6">
+        <label class="form-label form-label-sm">{{ hospital_form.name.label }}</label>
+        {{ hospital_form.name(class="form-control form-control-sm", placeholder="Ex: Benh vien Da khoa Trung uong") }}
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-sm btn-primary w-100" type="submit">{{ hospital_form.submit.label.text }}</button>
+      </div>
+    </form>
+    <div class="small text-muted mb-2">Doctors can only choose hospitals from this list during registration.</div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for hospital in hospitals %}
+        <span class="badge text-bg-light border">{{ hospital.name }}</span>
+      {% else %}
+        <span class="text-muted small">No hospitals yet.</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
 <div class="card shadow-sm">
   <div class="card-body">
     <form method="get" class="row g-2 mb-3">

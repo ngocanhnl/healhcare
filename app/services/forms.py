@@ -15,10 +15,13 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange
 from app.extensions import db
 from app.models.user import User
 from app.models.enums import UserRole
+from app.models.hospital import Hospital
 
 
 class RegisterForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
+    phone = StringField("Phone", validators=[DataRequired(), Length(min=8, max=20)])
     password = PasswordField("Password", validators=[DataRequired(), Length(min=6, max=72)])
     confirm_password = PasswordField(
         "Confirm Password",
@@ -32,7 +35,7 @@ class RegisterForm(FlaskForm):
 
     # Doctor extra fields (only used when role=DOCTOR)
     specialty = StringField("Specialty")
-    hospital_name = StringField("Hospital/Clinic")
+    hospital_id = SelectField("Hospital/Clinic", choices=[(0, "-- Select hospital --")], coerce=int)
     description = TextAreaField("Description")
     experience_years = IntegerField("Experience (years)", default=0)
 
@@ -43,11 +46,40 @@ class RegisterForm(FlaskForm):
         if exists is not None:
             raise ValidationError("Username already exists")
 
+    def validate_email(self, field):
+        email_value = (field.data or "").strip()
+        exists = db.session.execute(db.select(User.id).where(User.email == email_value)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Email already exists")
+
+    def validate_phone(self, field):
+        phone_value = (field.data or "").strip()
+        exists = db.session.execute(db.select(User.id).where(User.phone == phone_value)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Phone already exists")
+
     def validate_experience_years(self, field):
         if field.data is None:
             return
         if field.data < 0 or field.data > 80:
             raise ValidationError("Experience years must be between 0 and 80")
+
+    def validate_specialty(self, field):
+        if self.role.data == UserRole.DOCTOR.value and not (field.data or "").strip():
+            raise ValidationError("Specialty is required for DOCTOR")
+
+    def validate_hospital_id(self, field):
+        if self.role.data != UserRole.DOCTOR.value:
+            return
+        if not field.data:
+            raise ValidationError("Please select a hospital for DOCTOR account")
+        exists = db.session.execute(db.select(Hospital.id).where(Hospital.id == field.data)).scalar_one_or_none()
+        if exists is None:
+            raise ValidationError("Selected hospital does not exist")
+
+    def set_hospital_choices(self):
+        hospitals = list(db.session.execute(db.select(Hospital).order_by(Hospital.name.asc())).scalars().all())
+        self.hospital_id.choices = [(0, "-- Select hospital --")] + [(h.id, h.name) for h in hospitals]
 
 
 class LoginForm(FlaskForm):
@@ -57,11 +89,9 @@ class LoginForm(FlaskForm):
 
 
 class SearchDoctorForm(FlaskForm):
-    doctor_name = StringField("Doctor name", validators=[Length(max=80)])
-    hospital_name = StringField("Hospital/Clinic", validators=[Length(max=160)])
-    specialty = StringField("Specialty", validators=[Length(max=120)])
-    min_experience_years = IntegerField("Min experience (years)", validators=[NumberRange(min=0, max=80)], default=None)
-    max_experience_years = IntegerField("Max experience (years)", validators=[NumberRange(min=0, max=80)], default=None)
+    doctor_name = StringField("Doctor name", validators=[Optional(), Length(max=80)])
+    hospital_name = StringField("Hospital/Clinic", validators=[Optional(), Length(max=160)])
+    specialty = StringField("Specialty", validators=[Optional(), Length(max=120)])
     submit = SubmitField("Search")
 
 
@@ -147,6 +177,12 @@ class PatientContactForm(FlaskForm):
     submit = SubmitField("Update contact info")
 
 
+class DoctorReviewForm(FlaskForm):
+    stars = IntegerField("Sao (1-5)", validators=[DataRequired(), NumberRange(min=1, max=5)])
+    comment = TextAreaField("Bình luận", validators=[DataRequired(), Length(min=1, max=2000)])
+    submit = SubmitField("Gửi đánh giá")
+
+
 class NewAppointmentForm(FlaskForm):
     hospital_id = SelectField("Hospital/Clinic", choices=[], default="", validate_choice=False)
     doctor_id = SelectField("Doctor", choices=[], default="", validate_choice=False)
@@ -168,6 +204,11 @@ class DoctorProfileForm(FlaskForm):
     hospital_name = StringField("Hospital/Clinic", validators=[Length(max=160)])
     description = TextAreaField("Description", validators=[Length(max=2000)])
     experience_years = IntegerField("Experience (years)", validators=[DataRequired(), NumberRange(min=0, max=80)])
+    price_vnd = IntegerField(
+        "Giá đặt lịch (VND)",
+        validators=[DataRequired(), NumberRange(min=1, max=1000000000)],
+        default=500000,
+    )
     submit = SubmitField("Save profile")
 
 
@@ -177,4 +218,9 @@ class DiseaseAdminForm(FlaskForm):
     description = TextAreaField("Description", validators=[DataRequired(), Length(min=3, max=8000)])
     specialty = StringField("Specialty", validators=[DataRequired(), Length(min=2, max=120)])
     submit = SubmitField("Save disease")
+
+
+class HospitalAdminForm(FlaskForm):
+    name = StringField("Hospital name", validators=[DataRequired(), Length(min=2, max=160)])
+    submit = SubmitField("Create hospital")
 
