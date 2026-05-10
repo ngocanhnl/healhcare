@@ -86,6 +86,20 @@ DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/medical_platform?
 SECRET_KEY=your-secret
 ```
 
+#### Chatbot Setup (OpenAI)
+
+Để chatbot hoạt động, bạn cần API key từ OpenAI:
+
+1. Đăng ký tài khoản tại [OpenAI](https://platform.openai.com/)
+2. Tạo API key tại [API Keys](https://platform.openai.com/api-keys)
+3. Thêm vào `.env`:
+
+```
+OPENAI_API_KEY=sk-your-api-key-here
+```
+
+Nếu không có OpenAI key, chatbot sẽ dùng Gemini làm fallback (cần `GEMINI_API_KEY`).
+
 ### 5) Install dependencies
 
 Trong PowerShell tại thư mục project:
