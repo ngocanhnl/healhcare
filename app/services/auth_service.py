@@ -20,6 +20,7 @@ class AuthService:
         hospital_id: int | None = None,
         description: str | None = None,
         experience_years: int | None = None,
+        price_vnd: int | None = None,
     ) -> User:
         user = User(
             username=username,
@@ -39,12 +40,14 @@ class AuthService:
             hospital = db.session.get(Hospital, int(hospital_id))
             if not hospital:
                 raise ValueError("Selected hospital does not exist")
+            pv = int(price_vnd) if price_vnd is not None else 500000
             doc = Doctor(
                 user_id=user.id,
                 specialty=specialty.strip(),
                 hospital_id=hospital.id,
                 description=(description or "").strip() or None,
                 experience_years=int(experience_years or 0),
+                price_vnd=pv,
             )
             db.session.add(doc)
 

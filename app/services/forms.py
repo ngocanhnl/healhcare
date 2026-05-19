@@ -224,3 +224,87 @@ class HospitalAdminForm(FlaskForm):
     name = StringField("Hospital name", validators=[DataRequired(), Length(min=2, max=160)])
     submit = SubmitField("Create hospital")
 
+
+class AdminCreatePatientForm(FlaskForm):
+    username = StringField("Tên đăng nhập", validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
+    phone = StringField("Số điện thoại", validators=[DataRequired(), Length(min=8, max=20)])
+    password = PasswordField("Mật khẩu", validators=[DataRequired(), Length(min=6, max=72)])
+    confirm_password = PasswordField(
+        "Nhập lại mật khẩu",
+        validators=[DataRequired(), EqualTo("password", message="Mật khẩu không khớp")],
+    )
+    submit = SubmitField("Tạo bệnh nhân")
+
+    def validate_username(self, field):
+        exists = db.session.execute(db.select(User.id).where(User.username == field.data)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Tên đăng nhập đã tồn tại")
+
+    def validate_email(self, field):
+        email_value = (field.data or "").strip()
+        exists = db.session.execute(db.select(User.id).where(User.email == email_value)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Email đã được dùng")
+
+    def validate_phone(self, field):
+        phone_value = (field.data or "").strip()
+        exists = db.session.execute(db.select(User.id).where(User.phone == phone_value)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Số điện thoại đã được dùng")
+
+
+class AdminCreateDoctorForm(FlaskForm):
+    username = StringField("Tên đăng nhập", validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
+    phone = StringField("Số điện thoại", validators=[DataRequired(), Length(min=8, max=20)])
+    password = PasswordField("Mật khẩu", validators=[DataRequired(), Length(min=6, max=72)])
+    confirm_password = PasswordField(
+        "Nhập lại mật khẩu",
+        validators=[DataRequired(), EqualTo("password", message="Mật khẩu không khớp")],
+    )
+    specialty = StringField("Chuyên khoa", validators=[DataRequired(), Length(min=2, max=120)])
+    hospital_id = SelectField("Bệnh viện / phòng khám", choices=[(0, "-- Chọn cơ sở --")], coerce=int)
+    description = TextAreaField("Giới thiệu", validators=[Optional(), Length(max=2000)])
+    experience_years = IntegerField("Số năm kinh nghiệm", validators=[Optional(), NumberRange(min=0, max=80)], default=0)
+    price_vnd = IntegerField(
+        "Giá đặt lịch (VND)",
+        validators=[DataRequired(), NumberRange(min=1, max=1000000000)],
+        default=500000,
+    )
+    submit = SubmitField("Tạo bác sĩ")
+
+    def validate_username(self, field):
+        exists = db.session.execute(db.select(User.id).where(User.username == field.data)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Tên đăng nhập đã tồn tại")
+
+    def validate_email(self, field):
+        email_value = (field.data or "").strip()
+        exists = db.session.execute(db.select(User.id).where(User.email == email_value)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Email đã được dùng")
+
+    def validate_phone(self, field):
+        phone_value = (field.data or "").strip()
+        exists = db.session.execute(db.select(User.id).where(User.phone == phone_value)).scalar_one_or_none()
+        if exists is not None:
+            raise ValidationError("Số điện thoại đã được dùng")
+
+    def validate_hospital_id(self, field):
+        if not field.data:
+            raise ValidationError("Vui lòng chọn bệnh viện / phòng khám")
+        exists = db.session.execute(db.select(Hospital.id).where(Hospital.id == field.data)).scalar_one_or_none()
+        if exists is None:
+            raise ValidationError("Cơ sở đã chọn không tồn tại")
+
+    def validate_experience_years(self, field):
+        if field.data is None:
+            return
+        if field.data < 0 or field.data > 80:
+            raise ValidationError("Kinh nghiệm phải từ 0 đến 80 năm")
+
+    def set_hospital_choices(self):
+        hospitals = list(db.session.execute(db.select(Hospital).order_by(Hospital.name.asc())).scalars().all())
+        self.hospital_id.choices = [(0, "-- Chọn cơ sở --")] + [(h.id, h.name) for h in hospitals]
+

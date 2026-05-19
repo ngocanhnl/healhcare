@@ -34,6 +34,96 @@
   </div>
 </div>
 
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Tạo tài khoản bệnh nhân</h2>
+        <form method="post" action="{{ url_for('admin.create_patient') }}" class="row g-2">
+          {{ patient_create_form.csrf_token }}
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ patient_create_form.username.label }}</label>
+            {{ patient_create_form.username(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ patient_create_form.email.label }}</label>
+            {{ patient_create_form.email(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ patient_create_form.phone.label }}</label>
+            {{ patient_create_form.phone(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ patient_create_form.password.label }}</label>
+            {{ patient_create_form.password(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ patient_create_form.confirm_password.label }}</label>
+            {{ patient_create_form.confirm_password(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-12">
+            <button class="btn btn-sm btn-success" type="submit">{{ patient_create_form.submit.label.text }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Tạo tài khoản bác sĩ</h2>
+        <form method="post" action="{{ url_for('admin.create_doctor') }}" class="row g-2">
+          {{ doctor_create_form.csrf_token }}
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ doctor_create_form.username.label }}</label>
+            {{ doctor_create_form.username(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ doctor_create_form.email.label }}</label>
+            {{ doctor_create_form.email(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ doctor_create_form.phone.label }}</label>
+            {{ doctor_create_form.phone(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ doctor_create_form.specialty.label }}</label>
+            {{ doctor_create_form.specialty(class="form-control form-control-sm", placeholder="Ví dụ: Tim mạch") }}
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm">{{ doctor_create_form.hospital_id.label }}</label>
+            {{ doctor_create_form.hospital_id(class="form-select form-select-sm") }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm">{{ doctor_create_form.experience_years.label }}</label>
+            {{ doctor_create_form.experience_years(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label form-label-sm">{{ doctor_create_form.price_vnd.label }}</label>
+            {{ doctor_create_form.price_vnd(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ doctor_create_form.password.label }}</label>
+            {{ doctor_create_form.password(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ doctor_create_form.confirm_password.label }}</label>
+            {{ doctor_create_form.confirm_password(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-12">
+            <label class="form-label form-label-sm">{{ doctor_create_form.description.label }}</label>
+            {{ doctor_create_form.description(class="form-control form-control-sm", rows=2) }}
+          </div>
+          <div class="col-12">
+            <button class="btn btn-sm btn-primary" type="submit">{{ doctor_create_form.submit.label.text }}</button>
+          </div>
+        </form>
+        <p class="small text-muted mb-0 mt-2">Bác sĩ phải gắn với một bệnh viện đã có trong hệ thống (phần quản lý bệnh viện phía trên).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card shadow-sm">
   <div class="card-body">
     <form method="get" class="row g-2 mb-3">

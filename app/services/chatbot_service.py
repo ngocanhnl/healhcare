@@ -635,98 +635,84 @@ class ChatbotService:
             }
 
     @staticmethod
+    def _normalize_specialty(specialty: str) -> str:
+        """Map specialty names to database values."""
+        mapping = {
+            "nội khoa": "Noi khoa",
+            "tim mạch": "Tim mach",
+            "tim mạch": "Cardiology",
+            "da liễu": "Dermatology",
+            "da liễu": "Dermatology",
+            "nhi khoa": "Pediatrics",
+            "nhi khoa": "Pediatrics",
+            "tai mũi họng": "Tai mui hong",
+            "tai mũi họng": "Tai mui hong",
+            # Add more mappings as needed
+        }
+        normalized = specialty.lower().strip()
+        return mapping.get(normalized, specialty)
+
+    @staticmethod
+    def _call_gemini_chat(message: str) -> dict:
+        prompt = f"""
+Bạn là trợ lý y tế chuyên nghiệp tại Việt Nam. Nhiệm vụ của bạn là phân tích triệu chứng của bệnh nhân và đưa ra lời khuyên y tế.
+
+Triệu chứng của bệnh nhân: "{message}"
+
+Hãy trả lời bằng tiếng Việt với định dạng sau (luôn tuân thủ định dạng này):
+Trả lời: [Lời khuyên y tế hoặc câu hỏi nếu cần thêm thông tin]
+Chuyên khoa: [Tên chuyên khoa bằng tiếng Việt, ví dụ: Nội khoa, Nhi khoa, Da liễu, Tim mạch, Tai mũi họng, v.v. Nếu không xác định được, để trống]
+
+Lưu ý:
+- Nếu thông tin triệu chứng thiếu hoặc mơ hồ, hãy hỏi thêm câu hỏi cụ thể trong phần Trả lời.
+- Luôn gợi ý chuyên khoa phù hợp nếu có thể.
+- Trả lời chuyên nghiệp, thân thiện và khuyến khích thăm khám bác sĩ nếu cần.
+"""
+        payload = {
+            "model": current_app.config.get("GEMINI_CHAT_MODEL", "gemini-2.5-flash"),
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+        }
+        response = ChatbotService._gemini_post("generateContent", payload)
+        content = response["choices"][0]["message"]["content"]
+        return {"content": content, "raw": response}
+
+    @staticmethod
     def answer(message: str) -> dict:
-        top_k = int(current_app.config.get("RAG_TOP_K", 3))
-        diseases = ChatbotService.retrieve_diseases(message=message, top_k=top_k)
-
-        min_sim = float(current_app.config.get("RAG_MIN_SIMILARITY", 0.35))
-        top_score = diseases[0]["score"] if diseases else 0.0
-        keywords = ChatbotService._get_keywords_from_message(message)
-        # Heuristic: if we can't find ANY keyword occurrences in retrieved diseases,
-        # treat it as "no good match in dataset" even if embedding scores are non-zero.
-        keyword_match_exists = False
-        if keywords and diseases:
-            for d in diseases:
-                symptoms_text = ChatbotService._strip_diacritics(
-                    f"{d.get('symptoms') or ''} {d.get('description') or ''}".lower()
-                )
-                if any(kw in symptoms_text for kw in keywords):
-                    keyword_match_exists = True
-                    break
-
-        dataset_is_poor_match = (not diseases) or (top_score < min_sim) or (keywords and not keyword_match_exists)
-
-        # If dataset match is poor, use LLM triage fallback directly.
-        if dataset_is_poor_match:
-            fallback = ChatbotService._llm_triage_fallback(message=message)
-            suggested_specialty = fallback.get("suggested_specialty") or "General Medicine"
-            doctors = ChatbotService.suggest_doctors(specialty=suggested_specialty)
-            if not doctors:
-                doctors = ChatbotService.suggest_doctors(specialty=None)
-
-            if fallback.get("reply"):
-                reply_text = fallback.get("reply")
-                provider = fallback.get("llm_provider")
-                raw_text = fallback.get("llm_raw_text")
-            else:
-                llm_result = ChatbotService._llm_reply(
-                    message=message,
-                    context=ChatbotService._build_context(diseases=diseases, doctors=doctors),
-                )
-                reply_text = llm_result.get("reply")
-                provider = llm_result.get("provider")
-                raw_text = llm_result.get("raw_text")
-
-            result: dict = {
-                "reply": reply_text,
-                "suggested_specialty": suggested_specialty,
-                "suggested_doctors": doctors,
-                "related_diseases": diseases,
-                "dataset_is_poor_match": True,
-            }
-            result["llm_debug"] = {
-                "provider": provider,
-                "raw_text": raw_text,
-            }
-            return result
-
-        # Otherwise use current RAG pipeline.
-        diseases = ChatbotService._filter_diseases_with_llm(message=message, diseases=diseases)
-
-        # Pick doctors from the first specialty that actually returns results.
-        doctors: list[dict] = []
-        suggested_specialty = diseases[0]["specialty"] if diseases else "General Medicine"
-
-        if diseases:
-            seen: set[str] = set()
-            specialty_order = []
-            for d in diseases:
-                spec = d.get("specialty") or ""
-                if spec and spec not in seen:
-                    seen.add(spec)
-                    specialty_order.append(spec)
-
-            for spec in specialty_order:
-                doctors = ChatbotService.suggest_doctors(specialty=spec)
-                if doctors:
-                    suggested_specialty = spec
-                    break
-
-        if not doctors:
-            # Final fallback: show doctors from any specialty.
-            doctors = ChatbotService.suggest_doctors(specialty=None)
-
-        context = ChatbotService._build_context(diseases=diseases, doctors=doctors)
-        llm_result = ChatbotService._llm_reply(message=message, context=context)
+        # Gọi Gemini để phân tích và trả lời
+        gemini_result = ChatbotService._call_gemini_chat(message)
+        content = gemini_result["content"]
+        
+        # Parse reply và specialty từ content
+        reply = ""
+        suggested_specialty = ""
+        lines = content.split('\n')
+        for line in lines:
+            if line.startswith("Trả lời:"):
+                reply = line.replace("Trả lời:", "").strip()
+            elif line.startswith("Chuyên khoa:"):
+                suggested_specialty = line.replace("Chuyên khoa:", "").strip()
+        
+        # Nếu không parse được, dùng toàn bộ content làm reply
+        if not reply:
+            reply = content.strip()
+        
+        # Nếu có specialty, suggest doctors
+        suggested_doctors = []
+        if suggested_specialty:
+            normalized_specialty = ChatbotService._normalize_specialty(suggested_specialty)
+            suggested_doctors = ChatbotService.suggest_doctors(specialty=normalized_specialty)
+            if not suggested_doctors:
+                # Try original specialty
+                suggested_doctors = ChatbotService.suggest_doctors(specialty=suggested_specialty)
+        
         result = {
-            "reply": llm_result.get("reply"),
+            "reply": reply,
             "suggested_specialty": suggested_specialty,
-            "suggested_doctors": doctors,
-            "related_diseases": diseases,
-            "dataset_is_poor_match": False,
+            "suggested_doctors": suggested_doctors,
         }
         result["llm_debug"] = {
-            "provider": llm_result.get("provider"),
-            "raw_text": llm_result.get("raw_text"),
+            "provider": "gemini",
+            "raw_text": gemini_result["raw"],
         }
         return result
