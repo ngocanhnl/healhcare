@@ -11,7 +11,13 @@ from app.models.schedule import Schedule
 from app.models.user import User
 from app.services.authz import roles_required
 from app.services.chatbot_service import ChatbotService
-from app.services.forms import DiseaseAdminForm, HospitalAdminForm
+from app.services.auth_service import AuthService
+from app.services.forms import (
+    AdminCreateDoctorForm,
+    AdminCreatePatientForm,
+    DiseaseAdminForm,
+    HospitalAdminForm,
+)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -53,13 +59,79 @@ def dashboard():
         "hospital_name": hospital_name,
         "specialty": specialty,
     }
+    patient_create_form = AdminCreatePatientForm(prefix="patient")
+    doctor_create_form = AdminCreateDoctorForm(prefix="doctor")
+    doctor_create_form.set_hospital_choices()
     return render_template(
         "admin/dashboard.html",
         users=users,
         filters=filters,
         hospital_form=hospital_form,
         hospitals=hospitals,
+        patient_create_form=patient_create_form,
+        doctor_create_form=doctor_create_form,
     )
+
+
+@admin_bp.post("/users/patients/create")
+@login_required
+@roles_required(UserRole.ADMIN)
+def create_patient():
+    form = AdminCreatePatientForm(prefix="patient")
+    if not form.validate_on_submit():
+        for errs in form.errors.values():
+            for err in errs:
+                flash(err, "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    try:
+        AuthService.register_user(
+            username=form.username.data.strip(),
+            email=form.email.data.strip(),
+            phone=form.phone.data.strip(),
+            password=form.password.data,
+            role=UserRole.PATIENT,
+        )
+        flash("Đã tạo tài khoản bệnh nhân.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Không thể tạo bệnh nhân. Thử lại sau.", "danger")
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.post("/users/doctors/create")
+@login_required
+@roles_required(UserRole.ADMIN)
+def create_doctor():
+    form = AdminCreateDoctorForm(prefix="doctor")
+    form.set_hospital_choices()
+    if not form.validate_on_submit():
+        for errs in form.errors.values():
+            for err in errs:
+                flash(err, "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    try:
+        AuthService.register_user(
+            username=form.username.data.strip(),
+            email=form.email.data.strip(),
+            phone=form.phone.data.strip(),
+            password=form.password.data,
+            role=UserRole.DOCTOR,
+            specialty=form.specialty.data.strip(),
+            hospital_id=form.hospital_id.data,
+            description=(form.description.data or "").strip() or None,
+            experience_years=form.experience_years.data if form.experience_years.data is not None else 0,
+            price_vnd=form.price_vnd.data,
+        )
+        flash("Đã tạo tài khoản bác sĩ.", "success")
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), "danger")
+    except Exception:
+        db.session.rollback()
+        flash("Không thể tạo bác sĩ. Thử lại sau.", "danger")
+    return redirect(url_for("admin.dashboard"))
 
 
 @admin_bp.post("/hospitals/create")
