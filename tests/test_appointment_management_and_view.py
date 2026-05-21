@@ -214,6 +214,46 @@ class TestAppointmentManagementAndView(unittest.TestCase):
         self.assertEqual(AppointmentStatus.CONFIRMED, updated.status)
         self.assertFalse(updated.schedule.is_available)
 
+    def test_case_6_list_filters_by_month_year_and_status(self):
+        patient = self._create_user("patient_filter", UserRole.PATIENT, "0907777777")
+        doctor = self._create_doctor("doctor_filter", "Benh vien Filter List")
+        slot_may = self._create_slot(doctor, date(2026, 5, 10), time(9, 0), time(10, 0), True)
+        slot_june = self._create_slot(doctor, date(2026, 6, 11), time(9, 0), time(10, 0), True)
+
+        appt_may = AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot_may.id,
+            booking_for="self",
+            contact_fullname="patient_filter",
+            contact_email=patient.email,
+            contact_phone=patient.phone,
+            symptoms="may",
+        )
+        AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot_june.id,
+            booking_for="self",
+            contact_fullname="patient_filter",
+            contact_email=patient.email,
+            contact_phone=patient.phone,
+            symptoms="june",
+        )
+        AppointmentService.update_status(appointment=appt_may, status=AppointmentStatus.CANCELLED)
+
+        by_month = AppointmentService.list_for_patient(patient_id=patient.id, month=6)
+        self.assertEqual(1, len(by_month))
+        self.assertEqual(date(2026, 6, 11), by_month[0].schedule.date)
+
+        by_year = AppointmentService.list_for_patient(patient_id=patient.id, year=2026)
+        self.assertEqual(2, len(by_year))
+
+        by_status = AppointmentService.list_for_patient(patient_id=patient.id, status=AppointmentStatus.CANCELLED)
+        self.assertEqual(1, len(by_status))
+        self.assertEqual(appt_may.id, by_status[0].id)
+
+        years = AppointmentService.schedule_years_for_patient(patient_id=patient.id)
+        self.assertIn(2026, years)
+
 
 if __name__ == "__main__":
     unittest.main()

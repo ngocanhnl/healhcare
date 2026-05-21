@@ -1,5 +1,7 @@
 from datetime import date
 
+from sqlalchemy import func
+
 from app.extensions import db
 from app.models.doctor import Doctor
 from app.models.hospital import Hospital
@@ -22,10 +24,16 @@ class DoctorService:
     def list_doctor_names() -> list[str]:
         rows = (
             db.session.execute(
-                db.select(User.username).join(Doctor).distinct().order_by(User.username)
-            ).all()
+                db.select(User.full_name)
+                .join(Doctor, Doctor.user_id == User.id)
+                .where(User.full_name.isnot(None), User.full_name != "")
+                .distinct()
+                .order_by(User.full_name)
+            )
+            .scalars()
+            .all()
         )
-        return [r[0] for r in rows]
+        return [name.strip() for name in rows if name and name.strip()]
 
     @staticmethod
     def search_doctors(
@@ -38,13 +46,14 @@ class DoctorService:
         min_experience_years: int | None = None,
         max_experience_years: int | None = None,
     ) -> list[Doctor]:
-        stmt = db.select(Doctor).join(User).outerjoin(Hospital).order_by(User.username)
+        stmt = db.select(Doctor).join(User).outerjoin(Hospital).order_by(User.full_name, User.username)
         if doctor_name:
-            stmt = stmt.where(User.username.ilike(f"%{doctor_name.strip()}%"))
+            term = f"%{doctor_name.strip()}%"
+            stmt = stmt.where(User.full_name.ilike(term))
         if hospital_name:
             stmt = stmt.where(Hospital.name.ilike(f"%{hospital_name.strip()}%"))
         if specialty:
-            stmt = stmt.where(Doctor.specialty.ilike(f"%{specialty.strip()}%"))
+            stmt = stmt.where(Doctor.specialty == specialty.strip())
         if exact_hospital_name:
             stmt = stmt.where(Hospital.name == exact_hospital_name.strip())
         if exact_specialty:
@@ -77,9 +86,14 @@ class DoctorService:
 
     @staticmethod
     def list_doctor_options(*, hospital_id: int | None = None) -> list[tuple[int, str]]:
-        stmt = db.select(Doctor.id, User.username).join(User, User.id == Doctor.user_id).order_by(User.username.asc())
+        stmt = (
+            db.select(Doctor.id, User.full_name)
+            .join(User, User.id == Doctor.user_id)
+            .where(User.full_name.isnot(None), User.full_name != "")
+            .order_by(User.full_name.asc())
+        )
         if hospital_id:
             stmt = stmt.where(Doctor.hospital_id == hospital_id)
         rows = db.session.execute(stmt).all()
-        return [(int(d_id), username) for d_id, username in rows]
+        return [(int(d_id), (name or "").strip()) for d_id, name in rows if name and str(name).strip()]
 

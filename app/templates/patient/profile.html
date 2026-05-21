@@ -24,8 +24,14 @@
     <div class="row g-3">
       <div class="col-md-6">
         <div class="summary-card h-100">
-          <div class="text-muted small">Username</div>
+          <div class="text-muted small">Tên đăng nhập</div>
           <div class="fw-semibold">{{ current_user.username }}</div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="summary-card h-100">
+          <div class="text-muted small">Họ và tên</div>
+          <div class="fw-semibold">{{ current_user.display_name }}</div>
         </div>
       </div>
       <div class="col-md-6">
@@ -60,6 +66,11 @@
     </div>
     <form method="post" class="row g-3">
       {{ form.csrf_token }}
+      <div class="col-md-12">
+        <label class="form-label fw-semibold">{{ form.full_name.label }}</label>
+        {{ form.full_name(class="form-control", placeholder="Họ và tên") }}
+        {% for e in form.full_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+      </div>
       <div class="col-md-6">
         <label class="form-label fw-semibold">{{ form.email.label }}</label>
         {{ form.email(class="form-control", placeholder="Email") }}
@@ -86,46 +97,40 @@
       </div>
       <span class="soft-badge">{{ appointments|length }} records</span>
     </div>
+    {% include "partials/appointment_filters.html" %}
     <div class="table-responsive">
-      <table class="table align-middle mb-0">
+      <table class="table align-middle mb-0 table-hover">
         <thead>
           <tr>
-            <th>Doctor</th>
-            <th>Specialty</th>
-            <th>Hospital</th>
-            <th>Appointment Time</th>
-            <th>Booking For</th>
-            <th>Contact Info</th>
-            <th>Status</th>
+            <th>Bác sĩ</th>
+            <th>Chuyên khoa</th>
+            <th>Ngày khám</th>
+            <th>Trạng thái</th>
           </tr>
         </thead>
         <tbody>
           {% for a in appointments %}
-            <tr>
-              <td>{{ a.doctor.user.username }}</td>
+            <tr class="cursor-pointer" role="link" tabindex="0"
+                onclick="window.location='{{ url_for('patient.appointment_detail', appointment_id=a.id) }}'"
+                onkeydown="if(event.key==='Enter'){window.location='{{ url_for('patient.appointment_detail', appointment_id=a.id) }}'}">
+              <td class="fw-semibold">{{ a.doctor.user.display_name }}</td>
               <td class="text-muted">{{ a.doctor.specialty }}</td>
-              <td>{{ a.doctor.hospital.name if a.doctor.hospital else 'Not yet updated' }}</td>
-              <td>{{ a.schedule.date }} {{ a.schedule.start_time.strftime('%H:%M') }}-{{ a.schedule.end_time.strftime('%H:%M') }}</td>
               <td>
-                {% if a.booking_for == 'self' %}
-                  <span class="soft-badge alt">Myself</span>
+                {{ a.schedule.date.strftime('%d/%m/%Y') }}
+                <span class="text-muted">{{ a.schedule.start_time.strftime('%H:%M') }}–{{ a.schedule.end_time.strftime('%H:%M') }}</span>
+              </td>
+              <td>
+                {% if a.status.value == 'PENDING' %}
+                  <span class="soft-badge warning">Chờ xác nhận</span>
+                {% elif a.status.value == 'CONFIRMED' %}
+                  <span class="soft-badge success">Đã xác nhận</span>
                 {% else %}
-                  <span class="soft-badge">Relative</span>
-                  {% if current_user.phone and a.contact_phone == current_user.phone and a.patient_id != current_user.id %}
-                    <div class="small text-muted mt-1">Booked on your behalf</div>
-                  {% endif %}
+                  <span class="soft-badge">Đã hủy</span>
                 {% endif %}
               </td>
-              <td class="small">
-                <div><strong>Name:</strong> {{ a.contact_fullname or '-' }}</div>
-                <div><strong>Phone:</strong> {{ a.contact_phone or '-' }}</div>
-                <div><strong>Email:</strong> {{ a.contact_email or '-' }}</div>
-                <div><strong>Symptoms:</strong> {{ a.symptoms or '-' }}</div>
-              </td>
-              <td><span class="soft-badge">{{ a.status.value }}</span></td>
             </tr>
           {% else %}
-            <tr><td colspan="7"><div class="empty-state">No medical history recorded.</div></td></tr>
+            <tr><td colspan="4"><div class="empty-state">{% if filters_active %}Không có lịch phù hợp bộ lọc.{% else %}No medical history recorded.{% endif %}</div></td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -39,11 +39,12 @@ class TestAuthRegistration(unittest.TestCase):
         with self.assertRaises(ValueError):
             AuthService.register_user(
                 username="doctor_no_hospital",
+                full_name="Doctor No Hospital",
                 email="doctor_no_hospital@example.com",
                 phone="0905000001",
                 password="123456",
                 role=UserRole.DOCTOR,
-                specialty="Noi khoa",
+                specialty="Nội tổng quát",
                 hospital_id=None,
             )
 
@@ -51,11 +52,12 @@ class TestAuthRegistration(unittest.TestCase):
         with self.assertRaises(ValueError):
             AuthService.register_user(
                 username="doctor_invalid_hospital",
+                full_name="Doctor Invalid",
                 email="doctor_invalid_hospital@example.com",
                 phone="0905000002",
                 password="123456",
                 role=UserRole.DOCTOR,
-                specialty="Noi khoa",
+                specialty="Nội tổng quát",
                 hospital_id=9999,
             )
 
@@ -66,11 +68,12 @@ class TestAuthRegistration(unittest.TestCase):
 
         user = AuthService.register_user(
             username="doctor_ok",
+            full_name="Bac Si Nguyen Van A",
             email="doctor_ok@example.com",
             phone="0905000003",
             password="123456",
             role=UserRole.DOCTOR,
-            specialty="Noi khoa",
+            specialty="Nội tổng quát",
             hospital_id=hospital.id,
         )
         doctor = db.session.execute(db.select(Doctor).where(Doctor.user_id == user.id)).scalar_one_or_none()

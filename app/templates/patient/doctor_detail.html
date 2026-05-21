@@ -6,7 +6,7 @@
   <div class="row align-items-center g-4">
     <div class="col-lg-8">
       <span class="eyebrow mb-3">Doctor Profile</span>
-      <h1 class="display-6 fw-bold mb-2">{{ doctor.user.username }}</h1>
+      <h1 class="display-6 fw-bold mb-2">{{ doctor.user.display_name }}</h1>
       <p class="mb-3 text-white-50">{{ doctor.specialty }}{% if doctor.hospital %} at {{ doctor.hospital.name }}{% endif %}</p>
       <div class="d-flex flex-wrap gap-2">
         <span class="info-pill">{{ doctor.experience_years }} years of experience</span>
@@ -25,7 +25,7 @@
   <div class="col-lg-4">
     <div class="card h-100">
       <div class="card-body p-4">
-        <div class="doctor-avatar mb-3">{{ doctor.user.username[:1]|upper }}</div>
+        <div class="doctor-avatar mb-3">{{ doctor.user.display_name[:1]|upper }}</div>
         <div class="soft-badge mb-2">{{ doctor.specialty }}</div>
         {% if doctor.hospital %}
           <div class="text-muted small">{{ doctor.hospital.name }}</div>
@@ -116,7 +116,7 @@
                 <div class="p-3 border rounded summary-card">
                   <div class="d-flex justify-content-between align-items-start gap-3">
                     <div>
-                      <div class="fw-semibold">{{ r.patient.username }}</div>
+                      <div class="fw-semibold">{{ r.patient.display_name }}</div>
                       <div class="text-muted small">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
                     </div>
                     <div class="text-warning small">

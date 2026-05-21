@@ -12,6 +12,7 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    full_name = db.Column(db.String(120), nullable=True, index=True)
     email = db.Column(db.String(255), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -31,6 +32,11 @@ class User(UserMixin, db.Model):
 
     def check_password(self, raw_password: str) -> bool:
         return check_password_hash(self.password_hash, raw_password)
+
+    @property
+    def display_name(self) -> str:
+        name = (self.full_name or "").strip()
+        return name or self.username
 
 
 @login_manager.user_loader

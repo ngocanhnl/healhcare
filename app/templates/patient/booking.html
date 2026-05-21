@@ -124,6 +124,10 @@
       if (emailHelp) emailHelp.style.display = selfMissingEmail ? "block" : "none";
       if (phoneHelp) phoneHelp.style.display = selfMissingPhone ? "block" : "none";
     } else {
+      fullnameInput.value = "";
+      emailInput.value = "";
+      phoneInput.value = "";
+      symptomsInput.value = "";
       fullnameWrapper.style.display = "block";
       emailWrapper.style.display = "block";
       phoneWrapper.style.display = "block";

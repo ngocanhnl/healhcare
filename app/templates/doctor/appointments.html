@@ -5,49 +5,46 @@
 <div class="d-flex justify-content-between align-items-end mb-3">
   <div>
     <h1 class="h4 mb-0">Appointments</h1>
-    <div class="text-muted">Patients who booked your schedules.</div>
+    <div class="text-muted">Bấm vào một dòng để xem chi tiết và cập nhật trạng thái.</div>
   </div>
 </div>
 
 <div class="card shadow-sm">
   <div class="card-body">
+    {% include "partials/appointment_filters.html" %}
     <div class="table-responsive">
-      <table class="table table-sm align-middle">
+      <table class="table table-sm align-middle table-hover mb-0">
         <thead>
           <tr>
-            <th>Patient</th>
-            <th>Booking For</th>
-            <th>Booked Person Info</th>
-            <th>Slot</th>
-            <th>Status</th>
-            <th class="text-end">Action</th>
+            <th>Bệnh nhân</th>
+            <th>Chuyên khoa</th>
+            <th>Ngày khám</th>
+            <th>Trạng thái</th>
           </tr>
         </thead>
         <tbody>
           {% for a in appointments %}
-            <tr>
-              <td>{{ a.patient.username }}</td>
+            <tr class="cursor-pointer" role="link" tabindex="0"
+                onclick="window.location='{{ url_for('doctor.appointment_detail', appointment_id=a.id) }}'"
+                onkeydown="if(event.key==='Enter'){window.location='{{ url_for('doctor.appointment_detail', appointment_id=a.id) }}'}">
+              <td class="fw-semibold">{{ a.patient.display_name }}</td>
+              <td class="text-muted">{{ a.doctor.specialty }}</td>
               <td>
-                {% if a.booking_for == 'self' %}
-                  <span class="badge text-bg-info">Self</span>
+                {{ a.schedule.date.strftime('%d/%m/%Y') }}
+                <span class="text-muted">{{ a.schedule.start_time.strftime('%H:%M') }}–{{ a.schedule.end_time.strftime('%H:%M') }}</span>
+              </td>
+              <td>
+                {% if a.status.value == 'PENDING' %}
+                  <span class="badge text-bg-warning">Chờ xác nhận</span>
+                {% elif a.status.value == 'CONFIRMED' %}
+                  <span class="badge text-bg-success">Đã xác nhận</span>
                 {% else %}
-                  <span class="badge text-bg-secondary">Relative</span>
+                  <span class="badge text-bg-secondary">Đã hủy</span>
                 {% endif %}
-              </td>
-              <td class="small">
-                <div><strong>Name:</strong> {{ a.contact_fullname or '-' }}</div>
-                <div><strong>Phone:</strong> {{ a.contact_phone or '-' }}</div>
-                <div><strong>Email:</strong> {{ a.contact_email or '-' }}</div>
-                <div><strong>Symptoms:</strong> {{ a.symptoms or '-' }}</div>
-              </td>
-              <td>{{ a.schedule.date }} {{ a.schedule.start_time.strftime('%H:%M') }}-{{ a.schedule.end_time.strftime('%H:%M') }}</td>
-              <td><span class="badge text-bg-light border">{{ a.status.value }}</span></td>
-              <td class="text-end">
-                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('doctor.appointment_detail', appointment_id=a.id) }}">Manage</a>
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="text-muted">No appointments yet.</td></tr>
+            <tr><td colspan="4" class="text-muted">{% if filters_active %}Không có lịch phù hợp bộ lọc.{% else %}No appointments yet.{% endif %}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -55,4 +52,3 @@
   </div>
 </div>
 {% endblock %}
-

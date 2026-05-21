@@ -16,11 +16,13 @@ from app.models.schedule import Schedule
 from app.models.user import User
 
 
-def _get_or_create_user(username: str, password: str, role: UserRole) -> User:
+def _get_or_create_user(username: str, password: str, role: UserRole, *, full_name: str | None = None) -> User:
     user = db.session.execute(db.select(User).where(User.username == username)).scalar_one_or_none()
     if user:
+        if full_name and not (user.full_name or "").strip():
+            user.full_name = full_name
         return user
-    user = User(username=username, role=role)
+    user = User(username=username, full_name=full_name or username.replace("_", " ").title(), role=role)
     user.set_password(password)
     db.session.add(user)
     db.session.flush()
@@ -28,13 +30,13 @@ def _get_or_create_user(username: str, password: str, role: UserRole) -> User:
 
 
 def seed():
-    admin = _get_or_create_user("admin", "admin123", UserRole.ADMIN)
-    p1 = _get_or_create_user("patient1", "patient123", UserRole.PATIENT)
-    p2 = _get_or_create_user("patient2", "patient123", UserRole.PATIENT)
+    admin = _get_or_create_user("admin", "admin123", UserRole.ADMIN, full_name="Quan tri vien")
+    p1 = _get_or_create_user("patient1", "patient123", UserRole.PATIENT, full_name="Nguyen Van Benh Nhan")
+    p2 = _get_or_create_user("patient2", "patient123", UserRole.PATIENT, full_name="Tran Thi Benh Nhan")
 
-    d1_user = _get_or_create_user("dr_anna", "doctor123", UserRole.DOCTOR)
-    d2_user = _get_or_create_user("dr_binh", "doctor123", UserRole.DOCTOR)
-    d3_user = _get_or_create_user("dr_chau", "doctor123", UserRole.DOCTOR)
+    d1_user = _get_or_create_user("dr_anna", "doctor123", UserRole.DOCTOR, full_name="BS Nguyen Thi Anna")
+    d2_user = _get_or_create_user("dr_binh", "doctor123", UserRole.DOCTOR, full_name="BS Tran Van Binh")
+    d3_user = _get_or_create_user("dr_chau", "doctor123", UserRole.DOCTOR, full_name="BS Le Minh Chau")
 
     def get_or_create_doctor(user: User, specialty: str, exp: int, desc: str, hospital_name: str | None) -> Doctor:
         doc = db.session.execute(db.select(Doctor).where(Doctor.user_id == user.id)).scalar_one_or_none()
@@ -66,9 +68,9 @@ def seed():
         db.session.flush()
         return doc
 
-    doc1 = get_or_create_doctor(d1_user, "Cardiology", 8, "Heart specialist with focus on preventive care.", "Hospital A")
-    doc2 = get_or_create_doctor(d2_user, "Dermatology", 5, "Skin & allergy clinic, modern treatment methods.", "Clinic B")
-    doc3 = get_or_create_doctor(d3_user, "Pediatrics", 10, "Child health and vaccination consultation.", "Hospital C")
+    doc1 = get_or_create_doctor(d1_user, "Tim mạch", 8, "Heart specialist with focus on preventive care.", "Hospital A")
+    doc2 = get_or_create_doctor(d2_user, "Da liễu", 5, "Skin & allergy clinic, modern treatment methods.", "Clinic B")
+    doc3 = get_or_create_doctor(d3_user, "Khoa nhi", 10, "Child health and vaccination consultation.", "Hospital C")
 
     def add_slots(doc: Doctor, start_day_offset: int):
         base = date.today() + timedelta(days=start_day_offset)

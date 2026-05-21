@@ -22,6 +22,7 @@
     doctor_service.py
     forms.py
     schedule_service.py
+    mail_service.py
   /templates
     base.html
     /auth
@@ -84,6 +85,18 @@ Ví dụ:
 ```
 DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/medical_platform?charset=utf8mb4
 SECRET_KEY=your-secret
+```
+
+**Email thông báo khi bác sĩ đổi trạng thái lịch hẹn** (tùy chọn): nếu không cấu hình `MAIL_SERVER`, hệ thống bỏ qua gửi mail (phù hợp môi trường dev). Khi bật SMTP, email gửi tới `contact_email` của lịch, hoặc email tài khoản bệnh nhân nếu không có `contact_email`.
+
+```
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=your@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_DEFAULT_SENDER=your@gmail.com
+# MAIL_SUPPRESS_SEND=true   # true = không gửi thật (chỉ log), dùng khi test
 ```
 
 ### 5) Install dependencies

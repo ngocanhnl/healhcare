@@ -16,7 +16,7 @@
             <span>Support finding doctors, selecting time slots, and tracking appointments easily.</span>
           </div>
           {% if current_user.is_authenticated %}
-            <span class="small">Active account: <strong>{{ current_user.username }}</strong></span>
+            <span class="small">Active account: <strong>{{ current_user.display_name }}</strong></span>
           {% endif %}
         </div>
       </div>
@@ -65,7 +65,7 @@
           <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
             {% if current_user.is_authenticated %}
               <li class="nav-item d-none d-lg-block">
-                <span class="info-pill">Welcome, <strong>{{ current_user.username }}</strong> | {{ current_user.role.value }}</span>
+                <span class="info-pill">Welcome, <strong>{{ current_user.display_name }}</strong> | {{ current_user.role.value }}</span>
               </li>
               <li class="nav-item">
                 <form method="post" action="{{ url_for('auth.logout') }}">

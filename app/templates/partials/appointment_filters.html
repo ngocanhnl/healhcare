@@ -1,0 +1,38 @@
+<form method="get" action="{{ filter_action }}" class="appointment-filters row g-2 align-items-end mb-4">
+  {% for name, value in filter_hidden_fields.items() %}
+    <input type="hidden" name="{{ name }}" value="{{ value }}">
+  {% endfor %}
+  <div class="col-6 col-md-3">
+    <label class="form-label small text-muted mb-1" for="filter-month">Tháng</label>
+    <select class="form-select form-select-sm" id="filter-month" name="month">
+      <option value="" {% if not filter_month %}selected{% endif %}>Tất cả tháng</option>
+      {% for m in range(1, 13) %}
+        <option value="{{ m }}" {% if filter_month == m %}selected{% endif %}>Tháng {{ m }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label small text-muted mb-1" for="filter-year">Năm</label>
+    <select class="form-select form-select-sm" id="filter-year" name="year">
+      <option value="" {% if not filter_year %}selected{% endif %}>Tất cả năm</option>
+      {% for y in filter_year_options %}
+        <option value="{{ y }}" {% if filter_year == y %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12 col-md-3">
+    <label class="form-label small text-muted mb-1" for="filter-status">Trạng thái</label>
+    <select class="form-select form-select-sm" id="filter-status" name="status">
+      <option value="" {% if not filter_status %}selected{% endif %}>Tất cả trạng thái</option>
+      <option value="PENDING" {% if filter_status == 'PENDING' %}selected{% endif %}>Chờ xác nhận</option>
+      <option value="CONFIRMED" {% if filter_status == 'CONFIRMED' %}selected{% endif %}>Đã xác nhận</option>
+      <option value="CANCELLED" {% if filter_status == 'CANCELLED' %}selected{% endif %}>Đã hủy</option>
+    </select>
+  </div>
+  <div class="col-12 col-md-3 d-flex flex-wrap gap-2">
+    <button class="btn btn-primary btn-sm px-3" type="submit">Lọc</button>
+    {% if filters_active %}
+      <a class="btn btn-outline-secondary btn-sm px-3" href="{{ filter_reset_url }}">Xóa lọc</a>
+    {% endif %}
+  </div>
+</form>

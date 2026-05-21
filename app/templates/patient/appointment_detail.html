@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết lịch hẹn{% endblock %}
+
+{% block content %}
+<section class="hero-panel p-4 p-lg-5 mb-4">
+  <div class="row align-items-center g-4">
+    <div class="col-lg-8">
+      <span class="eyebrow mb-3">Appointment Detail</span>
+      <h1 class="display-6 fw-bold mb-2">Chi tiết lịch hẹn #{{ appointment.id }}</h1>
+      <p class="mb-0 text-white-50">Thông tin đầy đủ về cuộc khám và người được đặt lịch.</p>
+    </div>
+    <div class="col-lg-4 text-lg-end">
+      <a class="btn btn-light px-4" href="{{ url_for('patient.dashboard') }}">Quay lại danh sách</a>
+    </div>
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body p-4">
+        <h2 class="section-title mb-3">Thông tin khám</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="summary-card h-100">
+              <div class="text-muted small">Bác sĩ</div>
+              <div class="fw-semibold">{{ appointment.doctor.user.display_name }}</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="summary-card h-100">
+              <div class="text-muted small">Chuyên khoa</div>
+              <div class="fw-semibold">{{ appointment.doctor.specialty }}</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="summary-card h-100">
+              <div class="text-muted small">Bệnh viện</div>
+              <div class="fw-semibold">{{ appointment.doctor.hospital.name if appointment.doctor.hospital else 'Chưa cập nhật' }}</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="summary-card h-100">
+              <div class="text-muted small">Ngày giờ khám</div>
+              <div class="fw-semibold">
+                {{ appointment.schedule.date.strftime('%d/%m/%Y') }}
+                {{ appointment.schedule.start_time.strftime('%H:%M') }}–{{ appointment.schedule.end_time.strftime('%H:%M') }}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="summary-card h-100">
+              <div class="text-muted small">Trạng thái</div>
+              <div>
+                {% if appointment.status.value == 'PENDING' %}
+                  <span class="soft-badge warning">Chờ xác nhận</span>
+                {% elif appointment.status.value == 'CONFIRMED' %}
+                  <span class="soft-badge success">Đã xác nhận</span>
+                {% else %}
+                  <span class="soft-badge">Đã hủy</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="summary-card h-100">
+              <div class="text-muted small">Ngày đặt lịch</div>
+              <div class="fw-semibold">{{ appointment.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body p-4">
+        <h2 class="section-title mb-3">Người được khám</h2>
+        <div class="mb-3">
+          <div class="text-muted small">Đặt cho</div>
+          <div class="fw-semibold">
+            {% if appointment.booking_for == 'self' %}
+              Bản thân
+            {% else %}
+              Người thân
+              {% if current_user.is_authenticated and current_user.phone and appointment.contact_phone == current_user.phone and appointment.patient_id != current_user.id %}
+                <span class="text-muted small d-block">Được người khác đặt hộ theo SĐT của bạn</span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="text-muted small">Họ tên</div>
+          <div class="fw-semibold">{{ appointment.contact_fullname or '—' }}</div>
+        </div>
+        <div class="mb-3">
+          <div class="text-muted small">Số điện thoại</div>
+          <div class="fw-semibold">{{ appointment.contact_phone or '—' }}</div>
+        </div>
+        <div class="mb-3">
+          <div class="text-muted small">Email</div>
+          <div class="fw-semibold">{{ appointment.contact_email or '—' }}</div>
+        </div>
+        <div class="mb-0">
+          <div class="text-muted small">Triệu chứng / ghi chú</div>
+          <div class="fw-semibold">{{ appointment.symptoms or '—' }}</div>
+        </div>
+      </div>
+    </div>
+
+    {% if review or is_booker %}
+      <div class="card mt-4">
+        <div class="card-body p-4">
+          <h2 class="section-title mb-3">Đánh giá bác sĩ</h2>
+          {% if review %}
+            <div class="mb-2">
+              <div class="text-muted small mb-1">Số sao đã đánh giá</div>
+              <div class="d-flex align-items-center gap-1 review-stars-display" aria-label="{{ review.stars }} trên 5 sao">
+                {% for i in range(1, 6) %}
+                  <span class="review-star {% if i <= review.stars %}is-filled{% else %}is-empty{% endif %}" aria-hidden="true">&#9733;</span>
+                {% endfor %}
+                <span class="ms-2 fw-semibold">{{ review.stars }}/5</span>
+              </div>
+            </div>
+            {% if review.comment %}
+              <div class="mb-0">
+                <div class="text-muted small">Bình luận</div>
+                <div class="fw-semibold">{{ review.comment }}</div>
+              </div>
+            {% endif %}
+          {% elif review_meta.can_review %}
+            <p class="section-subtitle mb-3">Bạn có thể đánh giá sau khi thanh toán thành công.</p>
+            <a class="btn btn-primary" href="{{ url_for('patient.appointment_review', appointment_id=appointment.id) }}">Đánh giá</a>
+          {% else %}
+            <span class="soft-badge">Chưa thể đánh giá</span>
+            <p class="small text-muted mt-2 mb-0">Cần thanh toán thành công và lịch không bị hủy.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

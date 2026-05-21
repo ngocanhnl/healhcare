@@ -12,6 +12,7 @@ class AuthService:
     def register_user(
         *,
         username: str,
+        full_name: str,
         email: str,
         phone: str,
         password: str,
@@ -24,6 +25,7 @@ class AuthService:
     ) -> User:
         user = User(
             username=username,
+            full_name=(full_name or "").strip() or username,
             email=(email or "").strip(),
             phone=(phone or "").strip(),
             role=role,

@@ -40,66 +40,42 @@
   <div class="card-body p-4">
     <div class="mb-3">
       <h2 class="section-title mb-1">Appointment List</h2>
-      <p class="section-subtitle">Bao gom lich ban tu dat va lich nguoi khac da dat ho theo so dien thoai cua tai khoan.</p>
+      <p class="section-subtitle">Bấm vào một dòng để xem chi tiết (đặt cho ai, liên hệ, đánh giá…).</p>
     </div>
+    {% include "partials/appointment_filters.html" %}
     <div class="table-responsive">
-      <table class="table align-middle mb-0">
+      <table class="table align-middle mb-0 table-hover">
         <thead>
           <tr>
-            <th>Doctor</th>
-            <th>Specialty</th>
-            <th>Appointment</th>
-            <th>Booking For</th>
-            <th>Contact Info</th>
-            <th>Status</th>
-            <th class="text-end">Rating</th>
-            <th>Created</th>
+            <th>Bác sĩ</th>
+            <th>Chuyên khoa</th>
+            <th>Ngày khám</th>
+            <th>Trạng thái</th>
           </tr>
         </thead>
         <tbody>
           {% for a in appointments %}
-            <tr>
-              <td>{{ a.doctor.user.username }}</td>
+            <tr class="cursor-pointer" role="link" tabindex="0"
+                onclick="window.location='{{ url_for('patient.appointment_detail', appointment_id=a.id) }}'"
+                onkeydown="if(event.key==='Enter'){window.location='{{ url_for('patient.appointment_detail', appointment_id=a.id) }}'}">
+              <td class="fw-semibold">{{ a.doctor.user.display_name }}</td>
               <td class="text-muted">{{ a.doctor.specialty }}</td>
-              <td>{{ a.schedule.date }} {{ a.schedule.start_time.strftime('%H:%M') }}-{{ a.schedule.end_time.strftime('%H:%M') }}</td>
               <td>
-                {% if a.booking_for == 'self' %}
-                  <span class="soft-badge alt">Myself</span>
-                {% else %}
-                  <span class="soft-badge">Relative</span>
-                  {% if current_user.phone and a.contact_phone == current_user.phone and a.patient_id != current_user.id %}
-                    <div class="small text-muted mt-1">Booked on your behalf</div>
-                  {% endif %}
-                {% endif %}
-              </td>
-              <td class="small">
-                <div><strong>Name:</strong> {{ a.contact_fullname or '-' }}</div>
-                <div><strong>Phone:</strong> {{ a.contact_phone or '-' }}</div>
-                <div><strong>Email:</strong> {{ a.contact_email or '-' }}</div>
-                <div><strong>Symptoms:</strong> {{ a.symptoms or '-' }}</div>
+                {{ a.schedule.date.strftime('%d/%m/%Y') }}
+                <span class="text-muted">{{ a.schedule.start_time.strftime('%H:%M') }}–{{ a.schedule.end_time.strftime('%H:%M') }}</span>
               </td>
               <td>
                 {% if a.status.value == 'PENDING' %}
-                  <span class="soft-badge warning">PENDING</span>
+                  <span class="soft-badge warning">Chờ xác nhận</span>
                 {% elif a.status.value == 'CONFIRMED' %}
-                  <span class="soft-badge success">CONFIRMED</span>
+                  <span class="soft-badge success">Đã xác nhận</span>
                 {% else %}
-                  <span class="soft-badge">CANCELLED</span>
+                  <span class="soft-badge">Đã hủy</span>
                 {% endif %}
               </td>
-              <td class="text-end">
-                {% if review_meta[a.id].can_review %}
-                  <a class="btn btn-sm btn-primary px-3" href="{{ url_for('patient.appointment_review', appointment_id=a.id) }}">Đánh giá</a>
-                {% elif review_meta[a.id].reviewed %}
-                  <span class="soft-badge alt">Đã đánh giá</span>
-                {% else %}
-                  <span class="soft-badge">Chưa thể đánh giá</span>
-                {% endif %}
-              </td>
-              <td class="text-muted small">{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="8"><div class="empty-state">Ban chua co lich hen nao. Hay bat dau dat lich kham moi.</div></td></tr>
+            <tr><td colspan="4"><div class="empty-state">{% if filters_active %}Không có lịch phù hợp bộ lọc.{% else %}Ban chua co lich hen nao. Hay bat dau dat lich kham moi.{% endif %}</div></td></tr>
           {% endfor %}
         </tbody>
       </table>

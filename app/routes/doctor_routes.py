@@ -84,9 +84,11 @@ def profile():
     doctor = _require_doctor_profile()
     form = DoctorProfileForm(obj=doctor)
     if request.method == "GET":
+        form.full_name.data = doctor.user.display_name
         form.hospital_name.data = doctor.hospital.name if doctor.hospital else ""
 
     if form.validate_on_submit():
+        doctor.user.full_name = (form.full_name.data or "").strip()
         doctor.specialty = form.specialty.data.strip()
         doctor.experience_years = int(form.experience_years.data)
         doctor.description = (form.description.data or "").strip() or None
@@ -364,8 +366,30 @@ def schedule_delete(schedule_id: int):
 @roles_required(UserRole.DOCTOR)
 def appointments():
     doctor = _require_doctor_profile()
-    appts = AppointmentService.list_for_doctor(doctor_id=doctor.id)
-    return render_template("doctor/appointments.html", appointments=appts)
+    month, year, status = AppointmentService.parse_list_filters(
+        month=request.args.get("month", type=int),
+        year=request.args.get("year", type=int),
+        status_value=request.args.get("status"),
+    )
+    appts = AppointmentService.list_for_doctor(
+        doctor_id=doctor.id, month=month, year=year, status=status
+    )
+    hidden: dict[str, int] = {}
+    if _is_admin():
+        hidden["doctor_id"] = doctor.id
+    filters_active = month is not None or year is not None or status is not None
+    return render_template(
+        "doctor/appointments.html",
+        appointments=appts,
+        filter_action=url_for("doctor.appointments"),
+        filter_month=month or "",
+        filter_year=year or "",
+        filter_status=status.value if status else "",
+        filter_year_options=AppointmentService.schedule_years_for_doctor(doctor_id=doctor.id),
+        filter_reset_url=url_for("doctor.appointments", **hidden),
+        filter_hidden_fields=hidden,
+        filters_active=filters_active,
+    )
 
 
 @doctor_bp.get("/appointments/<int:appointment_id>")
