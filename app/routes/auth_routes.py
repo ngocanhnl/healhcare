@@ -51,6 +51,7 @@ def register():
         try:
             AuthService.register_user(
                 username=form.username.data.strip(),
+                full_name=form.full_name.data.strip(),
                 email=form.email.data.strip(),
                 phone=form.phone.data.strip(),
                 password=form.password.data,

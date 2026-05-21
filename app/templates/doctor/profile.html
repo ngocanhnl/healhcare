@@ -16,8 +16,12 @@
   <div class="card-body">
     <div class="row g-3">
       <div class="col-md-6">
-        <div class="text-muted small">Username</div>
+        <div class="text-muted small">Tên đăng nhập</div>
         <div>{{ doctor.user.username }}</div>
+      </div>
+      <div class="col-md-6">
+        <div class="text-muted small">Họ và tên hiển thị</div>
+        <div>{{ doctor.user.display_name }}</div>
       </div>
       <div class="col-md-6">
         <div class="text-muted small">Role</div>
@@ -36,8 +40,13 @@
       {{ form.csrf_token }}
       <div class="row g-3">
         <div class="col-md-6">
+          <label class="form-label">{{ form.full_name.label }}</label>
+          {{ form.full_name(class="form-control", placeholder="Họ và tên") }}
+          {% for e in form.full_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
           <label class="form-label">{{ form.specialty.label }}</label>
-          {{ form.specialty(class="form-control", placeholder="e.g. Cardiology") }}
+          {{ form.specialty(class="form-select") }}
           {% for e in form.specialty.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
         </div>
         <div class="col-md-6">

@@ -485,3 +485,20 @@ a { text-decoration: none; }
   .weekly-calendar { grid-template-columns: 1fr; }
   .week-option-grid { grid-template-columns: 1fr; }
 }
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.review-stars-display .review-star {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.review-stars-display .review-star.is-filled {
+  color: #e6a817;
+}
+
+.review-stars-display .review-star.is-empty {
+  color: #d0d8dc;
+}

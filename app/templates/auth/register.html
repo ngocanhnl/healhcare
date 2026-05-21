@@ -35,6 +35,13 @@
                 {% for e in form.username.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
               </div>
               <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">{{ form.full_name.label }}</label>
+                {{ form.full_name(class="form-control", placeholder="Nguyen Van A") }}
+                {% for e in form.full_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
                 <label class="form-label fw-semibold">{{ form.role.label }}</label>
                 {{ form.role(class="form-select", id="role") }}
                 {% for e in form.role.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
@@ -71,7 +78,7 @@
               <div class="fw-semibold mb-3">Professional information for doctors</div>
               <div class="mb-3">
                 <label class="form-label fw-semibold">{{ form.specialty.label }}</label>
-                {{ form.specialty(class="form-control", placeholder="VD: Tim mach") }}
+                {{ form.specialty(class="form-select") }}
               </div>
               <div class="mb-3">
                 <label class="form-label fw-semibold">{{ form.hospital_id.label }}</label>

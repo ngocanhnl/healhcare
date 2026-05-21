@@ -229,10 +229,11 @@ class ChatbotService:
     @staticmethod
     def suggest_doctors(specialty: str | None, limit: int = 5) -> list[dict]:
         today = date.today()
+        doctor_label = db.func.coalesce(User.full_name, User.username).label("doctor_name")
         stmt = (
             db.select(
                 Doctor.id,
-                User.username,
+                doctor_label,
                 Doctor.specialty,
                 Doctor.experience_years,
                 Hospital.name.label("hospital_name"),
@@ -249,7 +250,7 @@ class ChatbotService:
                     Schedule.date >= today,
                 ),
             )
-            .group_by(Doctor.id, User.username, Doctor.specialty, Doctor.experience_years, Hospital.name)
+            .group_by(Doctor.id, User.full_name, User.username, Doctor.specialty, Doctor.experience_years, Hospital.name)
             .order_by(
                 db.desc("available_slots"),
                 db.desc(Doctor.experience_years),
@@ -262,7 +263,7 @@ class ChatbotService:
         return [
             {
                 "doctor_id": int(r.id),
-                "doctor_name": r.username,
+                "doctor_name": r.doctor_name,
                 "specialty": r.specialty,
                 "hospital_name": r.hospital_name,
                 "experience_years": int(r.experience_years or 0),
@@ -638,16 +639,31 @@ class ChatbotService:
     def _normalize_specialty(specialty: str) -> str:
         """Map specialty names to database values."""
         mapping = {
-            "nội khoa": "Noi khoa",
-            "tim mạch": "Tim mach",
-            "tim mạch": "Cardiology",
-            "da liễu": "Dermatology",
-            "da liễu": "Dermatology",
-            "nhi khoa": "Pediatrics",
-            "nhi khoa": "Pediatrics",
-            "tai mũi họng": "Tai mui hong",
-            "tai mũi họng": "Tai mui hong",
-            # Add more mappings as needed
+            "nội khoa": "Nội tổng quát",
+            "nội tổng quát": "Nội tổng quát",
+            "ngoại khoa": "Ngoại tổng quát",
+            "ngoại tổng quát": "Ngoại tổng quát",
+            "tim mạch": "Tim mạch",
+            "thần kinh": "Thần kinh",
+            "da liễu": "Da liễu",
+            "tai mũi họng": "Tai Mũi Họng",
+            "tmh": "Tai Mũi Họng",
+            "mắt": "Mắt",
+            "nha khoa": "Răng Hàm Mặt",
+            "răng hàm mặt": "Răng Hàm Mặt",
+            "sản phụ khoa": "Sản phụ khoa",
+            "nhi khoa": "Khoa nhi",
+            "khoa nhi": "Khoa nhi",
+            "chấn thương chỉnh hình": "Chấn thương chỉnh hình",
+            "tiêu hóa": "Tiêu hóa",
+            "hô hấp": "Hô hấp",
+            "nội tiết": "Nội tiết",
+            "thận": "Thận - Tiết niệu",
+            "ung bướu": "Ung bướu",
+            "dị ứng": "Dị ứng - Miễn dịch",
+            "tâm thần": "Tâm thần",
+            "phục hồi chức năng": "Phục hồi chức năng",
+            "y học cổ truyền": "Y học cổ truyền",
         }
         normalized = specialty.lower().strip()
         return mapping.get(normalized, specialty)

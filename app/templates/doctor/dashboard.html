@@ -51,13 +51,14 @@
         <div class="table-responsive">
           <table class="table table-sm align-middle">
             <thead>
-              <tr><th>Patient</th><th>Slot</th><th>Status</th></tr>
+              <tr><th>Bệnh nhân</th><th>Ngày khám</th><th>Trạng thái</th></tr>
             </thead>
             <tbody>
               {% for a in appointments %}
-                <tr>
-                  <td>{{ a.patient.username }}</td>
-                  <td>{{ a.schedule.date }} {{ a.schedule.start_time.strftime('%H:%M') }}</td>
+                <tr class="cursor-pointer" role="link" tabindex="0"
+                    onclick="window.location='{{ url_for('doctor.appointment_detail', appointment_id=a.id) }}'">
+                  <td>{{ a.patient.display_name }}</td>
+                  <td>{{ a.schedule.date.strftime('%d/%m/%Y') }} {{ a.schedule.start_time.strftime('%H:%M') }}</td>
                   <td><span class="badge text-bg-light border">{{ a.status.value }}</span></td>
                 </tr>
               {% else %}

@@ -106,6 +106,115 @@ class TestAppointmentBooking(unittest.TestCase):
                 symptoms="sot",
             )
 
+    def test_case_3a_relative_different_phone_allows_overlap(self):
+        patient = self._create_user("patient_rel_a", UserRole.PATIENT, "0904444444")
+        doctor = self._create_doctor("doctor_rel_a", "Benh vien Rel A")
+        slot_1 = self._create_slot(doctor, date(2026, 5, 13), time(9, 0), time(10, 0), True)
+        slot_2 = self._create_slot(doctor, date(2026, 5, 13), time(9, 30), time(10, 30), True)
+
+        AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot_1.id,
+            booking_for="relative",
+            contact_fullname="Nguyen Van A",
+            contact_email="a@example.com",
+            contact_phone="0911111111",
+            symptoms="ho",
+        )
+        appt_b = AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot_2.id,
+            booking_for="relative",
+            contact_fullname="Tran Van B",
+            contact_email="b@example.com",
+            contact_phone="0922222222",
+            symptoms="sot",
+        )
+        self.assertTrue(appt_b.id)
+
+    def test_case_3b_self_then_relative_different_phone_allowed(self):
+        patient = self._create_user("patient_rel_b", UserRole.PATIENT, "0905555555")
+        doctor = self._create_doctor("doctor_rel_b", "Benh vien Rel B")
+        slot_1 = self._create_slot(doctor, date(2026, 5, 14), time(8, 0), time(9, 0), True)
+        slot_2 = self._create_slot(doctor, date(2026, 5, 14), time(8, 30), time(9, 30), True)
+
+        AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot_1.id,
+            booking_for="self",
+            contact_fullname="patient_rel_b",
+            contact_email=patient.email,
+            contact_phone=patient.phone,
+            symptoms="dau",
+        )
+        appt_rel = AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot_2.id,
+            booking_for="relative",
+            contact_fullname="Nguoi than",
+            contact_email="than@example.com",
+            contact_phone="0933333333",
+            symptoms="met",
+        )
+        self.assertTrue(appt_rel.id)
+
+    def test_case_3c_relative_same_phone_overlap_blocked(self):
+        patient = self._create_user("patient_rel_c", UserRole.PATIENT, "0906666666")
+        doctor = self._create_doctor("doctor_rel_c", "Benh vien Rel C")
+        slot_1 = self._create_slot(doctor, date(2026, 5, 15), time(10, 0), time(11, 0), True)
+        slot_2 = self._create_slot(doctor, date(2026, 5, 15), time(10, 30), time(11, 30), True)
+
+        AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot_1.id,
+            booking_for="relative",
+            contact_fullname="Cung SDT",
+            contact_email="c@example.com",
+            contact_phone="0944444444",
+            symptoms="ho",
+        )
+        with self.assertRaises(ValueError):
+            AppointmentService.book(
+                patient_id=patient.id,
+                schedule_id=slot_2.id,
+                booking_for="relative",
+                contact_fullname="Cung SDT lan 2",
+                contact_email="c2@example.com",
+                contact_phone="09444 44444",
+                symptoms="ho tiep",
+            )
+
+    def test_case_3d_rebook_cancelled_slot_for_relative(self):
+        patient = self._create_user("patient_rebook", UserRole.PATIENT, "0908888888")
+        doctor = self._create_doctor("doctor_rebook", "Benh vien Rebook")
+        slot = self._create_slot(doctor, date(2026, 5, 16), time(11, 0), time(12, 0), True)
+
+        self_appt = AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot.id,
+            booking_for="self",
+            contact_fullname="patient_rebook",
+            contact_email=patient.email,
+            contact_phone=patient.phone,
+            symptoms="lan 1",
+        )
+        AppointmentService.update_status(appointment=self_appt, status=AppointmentStatus.CANCELLED)
+        self.assertTrue(slot.is_available)
+
+        relative_appt = AppointmentService.book(
+            patient_id=patient.id,
+            schedule_id=slot.id,
+            booking_for="relative",
+            contact_fullname="Nguoi than moi",
+            contact_email="than@example.com",
+            contact_phone="0977777777",
+            symptoms="lan 2",
+        )
+        self.assertEqual(self_appt.id, relative_appt.id)
+        self.assertEqual("relative", relative_appt.booking_for)
+        self.assertEqual(AppointmentStatus.PENDING, relative_appt.status)
+        self.assertFalse(slot.is_available)
+
     def test_case_3_book_fail_when_duplicate_time(self):
         patient = self._create_user("patient_c", UserRole.PATIENT, "0903333333")
         doctor = self._create_doctor("doctor_c", "Benh vien C")

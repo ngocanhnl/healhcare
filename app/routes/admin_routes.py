@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_required
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models.doctor import Doctor
@@ -39,9 +40,17 @@ def dashboard():
     if username:
         stmt = stmt.where(User.username.ilike(f"%{username}%"))
     if doctor_name:
-        stmt = stmt.where(User.role == UserRole.DOCTOR, User.username.ilike(f"%{doctor_name}%"))
+        term = f"%{doctor_name}%"
+        stmt = stmt.where(
+            User.role == UserRole.DOCTOR,
+            or_(User.full_name.ilike(term), User.username.ilike(term)),
+        )
     if patient_name:
-        stmt = stmt.where(User.role == UserRole.PATIENT, User.username.ilike(f"%{patient_name}%"))
+        term = f"%{patient_name}%"
+        stmt = stmt.where(
+            User.role == UserRole.PATIENT,
+            or_(User.full_name.ilike(term), User.username.ilike(term)),
+        )
     if role_value in {UserRole.ADMIN.value, UserRole.DOCTOR.value, UserRole.PATIENT.value}:
         stmt = stmt.where(User.role == UserRole(role_value))
     if hospital_name:
@@ -87,6 +96,7 @@ def create_patient():
     try:
         AuthService.register_user(
             username=form.username.data.strip(),
+            full_name=form.full_name.data.strip(),
             email=form.email.data.strip(),
             phone=form.phone.data.strip(),
             password=form.password.data,
@@ -114,6 +124,7 @@ def create_doctor():
     try:
         AuthService.register_user(
             username=form.username.data.strip(),
+            full_name=form.full_name.data.strip(),
             email=form.email.data.strip(),
             phone=form.phone.data.strip(),
             password=form.password.data,

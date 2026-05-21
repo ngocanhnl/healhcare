@@ -69,7 +69,7 @@
       {% if selected_doctor %}
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
           <div>
-            <div class="h5 mb-2">{{ selected_doctor.user.username }}</div>
+            <div class="h5 mb-2">{{ selected_doctor.user.display_name }}</div>
             <div class="text-muted small">{{ selected_doctor.specialty }}{% if selected_doctor.hospital %} | {{ selected_doctor.hospital.name }}{% endif %}</div>
           </div>
           <span class="soft-badge alt">{{ selected_doctor.experience_years }} years of experience</span>

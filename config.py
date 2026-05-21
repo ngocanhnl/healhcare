@@ -56,3 +56,13 @@ class Config:
     # If true, /chatbot will include raw LLM response (useful to verify Gemini/OpenAI).
     CHATBOT_DEBUG_LLM = os.getenv("CHATBOT_DEBUG_LLM", "false").strip().lower() in {"1", "true", "yes", "y", "on"}
 
+    # SMTP — de trong MAIL_SERVER thi khong gui email (dev). Vi du Gmail: MAIL_SERVER=smtp.gmail.com, MAIL_PORT=587, MAIL_USE_TLS=true
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "").strip()
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").strip().lower() in {"1", "true", "yes", "y", "on"}
+    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "false").strip().lower() in {"1", "true", "yes", "y", "on"}
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME", "bangjame2004@gmail.com").strip() or None
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "roujmlzhstvzwvll").strip() or None
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "bangjame2004@gmail.com").strip() or None
+    MAIL_SUPPRESS_SEND = os.getenv("MAIL_SUPPRESS_SEND", "false").strip().lower() in {"1", "true", "yes", "y", "on"}
+

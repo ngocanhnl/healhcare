@@ -46,6 +46,10 @@
             {{ patient_create_form.username(class="form-control form-control-sm") }}
           </div>
           <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ patient_create_form.full_name.label }}</label>
+            {{ patient_create_form.full_name(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
             <label class="form-label form-label-sm">{{ patient_create_form.email.label }}</label>
             {{ patient_create_form.email(class="form-control form-control-sm") }}
           </div>
@@ -79,6 +83,10 @@
             {{ doctor_create_form.username(class="form-control form-control-sm") }}
           </div>
           <div class="col-md-6">
+            <label class="form-label form-label-sm">{{ doctor_create_form.full_name.label }}</label>
+            {{ doctor_create_form.full_name(class="form-control form-control-sm") }}
+          </div>
+          <div class="col-md-6">
             <label class="form-label form-label-sm">{{ doctor_create_form.email.label }}</label>
             {{ doctor_create_form.email(class="form-control form-control-sm") }}
           </div>
@@ -88,7 +96,7 @@
           </div>
           <div class="col-md-6">
             <label class="form-label form-label-sm">{{ doctor_create_form.specialty.label }}</label>
-            {{ doctor_create_form.specialty(class="form-control form-control-sm", placeholder="Ví dụ: Tim mạch") }}
+            {{ doctor_create_form.specialty(class="form-select form-select-sm") }}
           </div>
           <div class="col-12">
             <label class="form-label form-label-sm">{{ doctor_create_form.hospital_id.label }}</label>
@@ -131,10 +139,10 @@
         <input class="form-control form-control-sm" type="text" name="username" placeholder="Username" value="{{ filters.username if filters else '' }}" />
       </div>
       <div class="col-md-3">
-        <input class="form-control form-control-sm" type="text" name="doctor_name" placeholder="Doctor name" value="{{ filters.doctor_name if filters else '' }}" />
+        <input class="form-control form-control-sm" type="text" name="doctor_name" placeholder="Họ tên bác sĩ" value="{{ filters.doctor_name if filters else '' }}" />
       </div>
       <div class="col-md-3">
-        <input class="form-control form-control-sm" type="text" name="patient_name" placeholder="Patient name" value="{{ filters.patient_name if filters else '' }}" />
+        <input class="form-control form-control-sm" type="text" name="patient_name" placeholder="Họ tên bệnh nhân" value="{{ filters.patient_name if filters else '' }}" />
       </div>
       <div class="col-md-3">
         <select class="form-select form-select-sm" name="role">
@@ -162,6 +170,7 @@
           <tr>
             <th>ID</th>
             <th>Username</th>
+            <th>Họ và tên</th>
             <th>Role</th>
             <th>Actions</th>
           </tr>
@@ -171,6 +180,7 @@
             <tr>
               <td>{{ u.id }}</td>
               <td>{{ u.username }}</td>
+              <td>{{ u.display_name }}</td>
               <td><span class="badge text-bg-light border">{{ u.role.value }}</span></td>
               <td>
                 <div class="d-flex flex-wrap gap-1">

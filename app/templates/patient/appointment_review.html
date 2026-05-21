@@ -10,7 +10,7 @@
       <p class="mb-0 text-white-50">Sau khi thanh toán thành công, bạn có thể gửi bình luận và chấm sao (1-5).</p>
     </div>
     <div class="col-lg-4 text-lg-end">
-      <a class="btn btn-light px-4" href="{{ url_for('patient.dashboard') }}">Back to Dashboard</a>
+      <a class="btn btn-light px-4" href="{{ url_for('patient.appointment_detail', appointment_id=appointment.id) }}">Quay lại chi tiết</a>
     </div>
   </div>
 </section>
@@ -24,7 +24,7 @@
           <div class="section-subtitle mb-3">Bác sĩ và khung giờ của appointment này.</div>
 
           <div class="summary-card mb-3">
-            <div><strong>Bác sĩ:</strong> {{ appointment.doctor.user.username }}</div>
+            <div><strong>Bác sĩ:</strong> {{ appointment.doctor.user.display_name }}</div>
             <div class="text-muted small">{{ appointment.doctor.specialty }}</div>
             <div><strong>Thời gian:</strong> {{ appointment.schedule.date }} {{ appointment.schedule.start_time.strftime('%H:%M') }}-{{ appointment.schedule.end_time.strftime('%H:%M') }}</div>
           </div>
@@ -64,7 +64,7 @@
 
           <div class="col-12 d-flex flex-wrap gap-2">
             <button class="btn btn-primary" type="submit">{{ form.submit.label.text }}</button>
-            <a class="btn btn-outline-secondary" href="{{ url_for('patient.dashboard') }}">Cancel</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('patient.appointment_detail', appointment_id=appointment.id) }}">Hủy</a>
           </div>
         </form>
       </div>

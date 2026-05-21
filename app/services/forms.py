@@ -16,10 +16,16 @@ from app.extensions import db
 from app.models.user import User
 from app.models.enums import UserRole
 from app.models.hospital import Hospital
+from app.models.medical_specialties import (
+    is_valid_medical_specialty,
+    specialty_form_choices,
+    specialty_search_choices,
+)
 
 
 class RegisterForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired(), Length(min=3, max=80)])
+    full_name = StringField("Họ và tên", validators=[DataRequired(), Length(min=2, max=120)])
     email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
     phone = StringField("Phone", validators=[DataRequired(), Length(min=8, max=20)])
     password = PasswordField("Password", validators=[DataRequired(), Length(min=6, max=72)])
@@ -34,7 +40,7 @@ class RegisterForm(FlaskForm):
     )
 
     # Doctor extra fields (only used when role=DOCTOR)
-    specialty = StringField("Specialty")
+    specialty = SelectField("Chuyên khoa", choices=specialty_form_choices(), validators=[Optional()])
     hospital_id = SelectField("Hospital/Clinic", choices=[(0, "-- Select hospital --")], coerce=int)
     description = TextAreaField("Description")
     experience_years = IntegerField("Experience (years)", default=0)
@@ -65,8 +71,12 @@ class RegisterForm(FlaskForm):
             raise ValidationError("Experience years must be between 0 and 80")
 
     def validate_specialty(self, field):
-        if self.role.data == UserRole.DOCTOR.value and not (field.data or "").strip():
-            raise ValidationError("Specialty is required for DOCTOR")
+        if self.role.data != UserRole.DOCTOR.value:
+            return
+        if not (field.data or "").strip():
+            raise ValidationError("Vui lòng chọn chuyên khoa cho tài khoản bác sĩ")
+        if not is_valid_medical_specialty(field.data):
+            raise ValidationError("Chuyên khoa không hợp lệ")
 
     def validate_hospital_id(self, field):
         if self.role.data != UserRole.DOCTOR.value:
@@ -89,9 +99,9 @@ class LoginForm(FlaskForm):
 
 
 class SearchDoctorForm(FlaskForm):
-    doctor_name = StringField("Doctor name", validators=[Optional(), Length(max=80)])
+    doctor_name = StringField("Họ tên bác sĩ", validators=[Optional(), Length(max=120)])
     hospital_name = StringField("Hospital/Clinic", validators=[Optional(), Length(max=160)])
-    specialty = StringField("Specialty", validators=[Optional(), Length(max=120)])
+    specialty = SelectField("Chuyên khoa", choices=specialty_search_choices(), validators=[Optional()])
     submit = SubmitField("Search")
 
 
@@ -172,6 +182,7 @@ class BookingForm(FlaskForm):
 
 
 class PatientContactForm(FlaskForm):
+    full_name = StringField("Họ và tên", validators=[DataRequired(), Length(min=2, max=120)])
     email = StringField("Email", validators=[Optional(), Email(), Length(max=255)])
     phone = StringField("Phone", validators=[Optional(), Length(min=8, max=20)])
     submit = SubmitField("Update contact info")
@@ -200,7 +211,8 @@ class UpdateAppointmentStatusForm(FlaskForm):
 
 
 class DoctorProfileForm(FlaskForm):
-    specialty = StringField("Specialty", validators=[DataRequired(), Length(min=2, max=120)])
+    full_name = StringField("Họ và tên", validators=[DataRequired(), Length(min=2, max=120)])
+    specialty = SelectField("Chuyên khoa", choices=specialty_form_choices(), validators=[DataRequired()])
     hospital_name = StringField("Hospital/Clinic", validators=[Length(max=160)])
     description = TextAreaField("Description", validators=[Length(max=2000)])
     experience_years = IntegerField("Experience (years)", validators=[DataRequired(), NumberRange(min=0, max=80)])
@@ -227,6 +239,7 @@ class HospitalAdminForm(FlaskForm):
 
 class AdminCreatePatientForm(FlaskForm):
     username = StringField("Tên đăng nhập", validators=[DataRequired(), Length(min=3, max=80)])
+    full_name = StringField("Họ và tên", validators=[DataRequired(), Length(min=2, max=120)])
     email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
     phone = StringField("Số điện thoại", validators=[DataRequired(), Length(min=8, max=20)])
     password = PasswordField("Mật khẩu", validators=[DataRequired(), Length(min=6, max=72)])
@@ -256,6 +269,7 @@ class AdminCreatePatientForm(FlaskForm):
 
 class AdminCreateDoctorForm(FlaskForm):
     username = StringField("Tên đăng nhập", validators=[DataRequired(), Length(min=3, max=80)])
+    full_name = StringField("Họ và tên", validators=[DataRequired(), Length(min=2, max=120)])
     email = StringField("Email", validators=[DataRequired(), Email(), Length(max=255)])
     phone = StringField("Số điện thoại", validators=[DataRequired(), Length(min=8, max=20)])
     password = PasswordField("Mật khẩu", validators=[DataRequired(), Length(min=6, max=72)])
@@ -263,7 +277,7 @@ class AdminCreateDoctorForm(FlaskForm):
         "Nhập lại mật khẩu",
         validators=[DataRequired(), EqualTo("password", message="Mật khẩu không khớp")],
     )
-    specialty = StringField("Chuyên khoa", validators=[DataRequired(), Length(min=2, max=120)])
+    specialty = SelectField("Chuyên khoa", choices=specialty_form_choices(), validators=[DataRequired()])
     hospital_id = SelectField("Bệnh viện / phòng khám", choices=[(0, "-- Chọn cơ sở --")], coerce=int)
     description = TextAreaField("Giới thiệu", validators=[Optional(), Length(max=2000)])
     experience_years = IntegerField("Số năm kinh nghiệm", validators=[Optional(), NumberRange(min=0, max=80)], default=0)

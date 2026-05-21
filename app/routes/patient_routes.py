@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.models.enums import AppointmentStatus, PaymentStatus, UserRole
+from app.models.medical_specialties import MEDICAL_SPECIALTIES
 from app.models.appointment import Appointment
 from app.models.doctor_review import DoctorReview
 from app.models.payment_transaction import PaymentTransaction
@@ -32,6 +33,86 @@ def _target_patient_id() -> int:
         db.select(User).where(User.role == UserRole.PATIENT).order_by(User.id.asc())
     ).scalars().first()
     return first_patient.id if first_patient else current_user.id
+
+
+def _patient_can_access_appointment(appt: Appointment, *, viewer_id: int, is_admin: bool) -> bool:
+    if is_admin:
+        return True
+    if appt.patient_id == viewer_id:
+        return True
+    viewer = db.session.get(User, viewer_id)
+    phone = (getattr(viewer, "phone", "") or "").strip() if viewer else ""
+    return bool(phone and appt.contact_phone == phone)
+
+
+def _load_appointment_list_filters() -> tuple[int | None, int | None, AppointmentStatus | None]:
+    return AppointmentService.parse_list_filters(
+        month=request.args.get("month", type=int),
+        year=request.args.get("year", type=int),
+        status_value=request.args.get("status"),
+    )
+
+
+def _patient_filter_hidden_fields(*, patient_id: int) -> dict[str, int]:
+    hidden: dict[str, int] = {}
+    if current_user.role == UserRole.ADMIN:
+        hidden["patient_id"] = patient_id
+    return hidden
+
+
+def _appointment_filter_template_context(
+    *,
+    month: int | None,
+    year: int | None,
+    status: AppointmentStatus | None,
+    years: list[int],
+    reset_url: str,
+    hidden: dict[str, int],
+    filter_action: str,
+) -> dict:
+    return {
+        "filter_action": filter_action,
+        "filter_month": month or "",
+        "filter_year": year or "",
+        "filter_status": status.value if status else "",
+        "filter_year_options": years,
+        "filter_reset_url": reset_url,
+        "filter_hidden_fields": hidden,
+        "filters_active": month is not None or year is not None or status is not None,
+    }
+
+
+def _build_review_meta(appts: list[Appointment], *, patient_id: int) -> dict[int, dict[str, bool]]:
+    appt_ids = [a.id for a in appts]
+    schedule_ids = [a.schedule_id for a in appts]
+    paid_schedule_ids: set[int] = set()
+    if schedule_ids:
+        paid_schedule_ids = set(
+            db.session.execute(
+                db.select(PaymentTransaction.schedule_id)
+                .where(
+                    PaymentTransaction.patient_id == patient_id,
+                    PaymentTransaction.schedule_id.in_(schedule_ids),
+                    PaymentTransaction.status == PaymentStatus.SUCCESS,
+                )
+            ).scalars().all()
+        )
+    reviewed_appointment_ids: set[int] = set()
+    if appt_ids:
+        reviewed_appointment_ids = set(
+            db.session.execute(
+                db.select(DoctorReview.appointment_id).where(
+                    DoctorReview.patient_id == patient_id, DoctorReview.appointment_id.in_(appt_ids)
+                )
+            ).scalars().all()
+        )
+    review_meta: dict[int, dict[str, bool]] = {}
+    for a in appts:
+        paid = a.schedule_id in paid_schedule_ids
+        reviewed = a.id in reviewed_appointment_ids
+        can_review = paid and (not reviewed) and a.status.value != "CANCELLED"
+        review_meta[a.id] = {"can_review": bool(can_review), "reviewed": bool(reviewed)}
+    return review_meta
 
 
 @patient_bp.get("/")
@@ -100,14 +181,13 @@ def search():
     filtered_hospitals = sorted({d.hospital.name for d in name_search_doctors if d.hospital and d.hospital.name})
     filtered_specialties = sorted({d.specialty for d in name_search_doctors if d.specialty})
 
-    specialties = DoctorService.list_specialties()
     hospitals = DoctorService.list_hospitals()
     doctor_names = DoctorService.list_doctor_names()
     return render_template(
         "patient/search_doctor.html",
         form=form,
         doctors=doctors,
-        specialties=specialties,
+        specialties=list(MEDICAL_SPECIALTIES),
         hospitals=hospitals,
         doctor_names=doctor_names,
         filtered_hospitals=filtered_hospitals,
@@ -219,7 +299,7 @@ def book(schedule_id: int):
     amount = float(getattr(schedule.doctor, "price_vnd", None) or 500000)
 
     self_info = {
-        "fullname": current_user.username,
+        "fullname": current_user.display_name,
         "email": (getattr(current_user, "email", "") or "").strip(),
         "phone": (getattr(current_user, "phone", "") or "").strip(),
         "symptoms": "",
@@ -236,14 +316,14 @@ def book(schedule_id: int):
         form.symptoms.data = self_info["symptoms"]
 
     if form.validate_on_submit():
-        booking_for = form.booking_for.data
+        booking_for = (form.booking_for.data or "self").strip().lower()
         contact_fullname = (form.fullname.data or "").strip()
         contact_email = (form.email.data or "").strip() or None
         contact_phone = (form.phone.data or "").strip()
         symptoms = (form.symptoms.data or "").strip() or None
 
         if booking_for == "self":
-            contact_fullname = self_info["fullname"]
+            contact_fullname = current_user.display_name
             if self_missing_email:
                 contact_email = (form.email.data or "").strip() or None
             else:
@@ -446,41 +526,48 @@ def vnpay_return():
 @roles_required(UserRole.PATIENT)
 def dashboard():
     patient_id = _target_patient_id()
-    appts = AppointmentService.list_for_patient(patient_id=patient_id)
-    appt_ids = [a.id for a in appts]
-    schedule_ids = [a.schedule_id for a in appts]
+    month, year, status = _load_appointment_list_filters()
+    appts = AppointmentService.list_for_patient(
+        patient_id=patient_id, month=month, year=year, status=status
+    )
+    hidden = _patient_filter_hidden_fields(patient_id=patient_id)
+    reset_url = url_for("patient.dashboard", **hidden)
+    filter_ctx = _appointment_filter_template_context(
+        month=month,
+        year=year,
+        status=status,
+        years=AppointmentService.schedule_years_for_patient(patient_id=patient_id),
+        reset_url=reset_url,
+        hidden=hidden,
+        filter_action=url_for("patient.dashboard"),
+    )
+    return render_template("patient/dashboard.html", appointments=appts, **filter_ctx)
 
-    paid_schedule_ids: set[int] = set()
-    if schedule_ids:
-        paid_schedule_ids = set(
-            db.session.execute(
-                db.select(PaymentTransaction.schedule_id)
-                .where(
-                    PaymentTransaction.patient_id == patient_id,
-                    PaymentTransaction.schedule_id.in_(schedule_ids),
-                    PaymentTransaction.status == PaymentStatus.SUCCESS,
-                )
-            ).scalars().all()
-        )
 
-    reviewed_appointment_ids: set[int] = set()
-    if appt_ids:
-        reviewed_appointment_ids = set(
-            db.session.execute(
-                db.select(DoctorReview.appointment_id).where(
-                    DoctorReview.patient_id == patient_id, DoctorReview.appointment_id.in_(appt_ids)
-                )
-            ).scalars().all()
-        )
+@patient_bp.get("/appointments/<int:appointment_id>")
+@login_required
+@roles_required(UserRole.PATIENT)
+def appointment_detail(appointment_id: int):
+    appt = db.session.get(Appointment, appointment_id)
+    if not appt:
+        abort(404)
+    is_admin = current_user.role == UserRole.ADMIN
+    viewer_id = current_user.id if not is_admin else _target_patient_id()
+    if not _patient_can_access_appointment(appt, viewer_id=viewer_id, is_admin=is_admin):
+        abort(404)
 
-    review_meta: dict[int, dict[str, bool]] = {}
-    for a in appts:
-        paid = a.schedule_id in paid_schedule_ids
-        reviewed = a.id in reviewed_appointment_ids
-        can_review = paid and (not reviewed) and a.status.value != "CANCELLED"
-        review_meta[a.id] = {"can_review": bool(can_review), "reviewed": bool(reviewed)}
+    review_meta = _build_review_meta([appt], patient_id=appt.patient_id)
+    meta = review_meta.get(appt.id, {"can_review": False, "reviewed": False})
+    is_booker = appt.patient_id == current_user.id or is_admin
+    review = DoctorReviewService.get_review_by_appointment_id(appointment_id=appointment_id)
 
-    return render_template("patient/dashboard.html", appointments=appts, review_meta=review_meta)
+    return render_template(
+        "patient/appointment_detail.html",
+        appointment=appt,
+        review_meta=meta,
+        is_booker=is_booker,
+        review=review,
+    )
 
 
 @patient_bp.get("/appointments/<int:appointment_id>/review")
@@ -513,11 +600,11 @@ def appointment_review(appointment_id: int):
 
     if existing:
         flash("Bạn đã đánh giá lịch hẹn này rồi.", "info")
-        return redirect(url_for("patient.dashboard"))
+        return redirect(url_for("patient.appointment_detail", appointment_id=appointment_id))
 
     if not paid or appt.status.value == "CANCELLED":
         flash("Bạn chỉ có thể đánh giá bác sĩ sau khi thanh toán thành công.", "warning")
-        return redirect(url_for("patient.dashboard"))
+        return redirect(url_for("patient.appointment_detail", appointment_id=appointment_id))
 
     form = DoctorReviewForm()
     if request.method == "POST" and form.validate_on_submit():
@@ -529,7 +616,7 @@ def appointment_review(appointment_id: int):
                 comment=form.comment.data,
             )
             flash("Cảm ơn bạn đã đánh giá!", "success")
-            return redirect(url_for("patient.dashboard"))
+            return redirect(url_for("patient.appointment_detail", appointment_id=appointment_id))
         except (ValueError, PermissionError) as e:
             flash(str(e), "danger")
         except Exception:
@@ -544,17 +631,32 @@ def appointment_review(appointment_id: int):
 @roles_required(UserRole.PATIENT)
 def profile():
     patient_id = _target_patient_id()
-    appts = AppointmentService.list_for_patient(patient_id=patient_id)
+    month, year, status = _load_appointment_list_filters()
+    appts = AppointmentService.list_for_patient(
+        patient_id=patient_id, month=month, year=year, status=status
+    )
+    hidden = _patient_filter_hidden_fields(patient_id=patient_id)
+    filter_ctx = _appointment_filter_template_context(
+        month=month,
+        year=year,
+        status=status,
+        years=AppointmentService.schedule_years_for_patient(patient_id=patient_id),
+        reset_url=url_for("patient.profile", **hidden),
+        hidden=hidden,
+        filter_action=url_for("patient.profile"),
+    )
     form = PatientContactForm()
     if request.method == "GET":
+        form.full_name.data = (getattr(current_user, "full_name", "") or "").strip() or current_user.display_name
         form.email.data = (getattr(current_user, "email", "") or "").strip()
         form.phone.data = (getattr(current_user, "phone", "") or "").strip()
     if form.validate_on_submit():
+        current_user.full_name = (form.full_name.data or "").strip()
         current_user.email = (form.email.data or "").strip() or None
         current_user.phone = (form.phone.data or "").strip() or None
         db.session.commit()
         flash("Cap nhat email/so dien thoai thanh cong.", "success")
         return redirect(url_for("patient.profile"))
 
-    return render_template("patient/profile.html", appointments=appts, form=form)
+    return render_template("patient/profile.html", appointments=appts, form=form, **filter_ctx)
 
