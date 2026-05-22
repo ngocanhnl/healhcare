@@ -23,19 +23,20 @@
     </div>
 
     <nav class="navbar navbar-expand-lg navbar-light main-nav sticky-top">
-      <div class="container py-2">
-        <a class="navbar-brand d-flex align-items-center gap-3" href="{{ url_for('patient.search') }}">
+      <div class="container-fluid main-nav-container px-3 py-2">
+        <a class="navbar-brand main-nav-brand d-flex align-items-center gap-2 flex-shrink-0" href="{{ url_for('patient.search') }}">
           <span class="navbar-brand-mark">M</span>
           <span>
             <span class="d-block fw-bold text-dark">MediBookTest</span>
             <span class="d-block small text-secondary">Smart Booking Platform</span>
           </span>
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler flex-shrink-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="nav">
-          <ul class="navbar-nav me-auto gap-lg-1">
+        <div class="collapse navbar-collapse main-nav-collapse" id="nav">
+          <div class="main-nav-menu w-100">
+          <ul class="navbar-nav main-nav-links me-lg-auto">
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('patient.search') }}">Find Doctors</a>
             </li>
@@ -50,7 +51,7 @@
             {% if current_user.is_authenticated and current_user.role.value == 'DOCTOR' %}
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.profile') }}">Doctor Profile</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.dashboard') }}">Dashboard</a></li>
-              <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.schedules') }}">Schedule</a></li>
+              <!-- <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.schedules') }}">Schedule</a></li> -->
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.weekly') }}">Shift</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('doctor.appointments') }}">Appointments</a></li>
               <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.disease_new') }}">Add disease</a></li>
@@ -62,10 +63,12 @@
               <li class="nav-item"><a class="nav-link" href="{{ url_for('patient.dashboard') }}">Patients</a></li>
             {% endif %}
           </ul>
-          <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+          <ul class="navbar-nav main-nav-actions ms-lg-auto align-items-lg-center">
             {% if current_user.is_authenticated %}
               <li class="nav-item d-none d-lg-block">
-                <span class="info-pill">Welcome, <strong>{{ current_user.display_name }}</strong> | {{ current_user.role.value }}</span>
+                <span class="info-pill main-nav-user-pill" title="{{ current_user.display_name }} | {{ current_user.role.value }}">
+                  <strong>{{ current_user.display_name }}</strong> | {{ current_user.role.value }}
+                </span>
               </li>
               <li class="nav-item">
                 <form method="post" action="{{ url_for('auth.logout') }}">
@@ -78,6 +81,7 @@
               <li class="nav-item"><a class="btn btn-primary btn-sm px-3" href="{{ url_for('auth.register') }}">Sign up</a></li>
             {% endif %}
           </ul>
+          </div>
         </div>
       </div>
     </nav>
