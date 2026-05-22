@@ -6,11 +6,11 @@
   <div class="row align-items-center g-4">
     <div class="col-lg-8">
       <span class="eyebrow mb-3">Weekly Planner</span>
-      <h1 class="display-6 fw-bold mb-2">Quan ly ca lam viec theo tung tuan</h1>
-      <p class="mb-0 text-white-50">Chuyen tuan, chon ngay bat ky tren bang va them ca lam trong mot giao dien duy nhat.</p>
+      <h1 class="display-6 fw-bold mb-2">Quản lý ca làm việc theo từng tuần</h1>
+      <p class="mb-0 text-white-50">Chuyển tuần, chọn ngày bất kỳ trên bảng và thêm ca làm trong một giao diện duy nhất.</p>
     </div>
     <div class="col-lg-4 text-lg-end">
-      <a class="btn btn-light px-4" href="{{ url_for('doctor.schedules') }}">Quan ly tat ca lich</a>
+      <a class="btn btn-light px-4" href="{{ url_for('doctor.schedules') }}">Quản lý tất cả lịch làm việc</a>
     </div>
   </div>
 </section>
@@ -18,19 +18,19 @@
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="metric-card">
-      <div class="small text-muted mb-2">Tuan dang xem</div>
+      <div class="small text-muted mb-2">Tuần đang xem</div>
       <div class="metric-value">{{ week_start.strftime('%d/%m') }} - {{ week_end.strftime('%d/%m') }}</div>
     </div>
   </div>
   <div class="col-md-4">
     <div class="metric-card">
-      <div class="small text-muted mb-2">Tong mau ca lap lai</div>
+      <div class="small text-muted mb-2">Tổng ca trong tuần</div>
       <div class="metric-value">{{ shifts|length }}</div>
     </div>
   </div>
   <div class="col-md-4">
     <div class="metric-card">
-      <div class="small text-muted mb-2">Ngay dang chon</div>
+      <div class="small text-muted mb-2">Ngày đang chọn</div>
       <div class="metric-value">{{ selected_date.strftime('%d/%m/%Y') }}</div>
     </div>
   </div>
@@ -40,12 +40,12 @@
   <div class="card-body p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
       <div>
-        <h2 class="section-title mb-1">Bang lich theo tuan</h2>
-        <p class="section-subtitle">Moi tuan co bo ca mau rieng. Xoa trong tuan nao chi anh huong den tuan do.</p>
+        <h2 class="section-title mb-1">Bảng lịch theo tuần</h2>
+        <p class="section-subtitle">Mỗi tuần có bộ ca mẫu riêng. Xóa trong tuần nào chỉ ảnh hưởng đến tuần đó.</p>
       </div>
       <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-outline-secondary" href="{{ url_for('doctor.weekly', week_start=prev_week.isoformat(), selected_date=prev_selected_date.isoformat()) }}">Tuan truoc</a>
-        <a class="btn btn-outline-primary" href="{{ url_for('doctor.weekly', week_start=next_week.isoformat(), selected_date=next_selected_date.isoformat()) }}">Tuan sau</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('doctor.weekly', week_start=prev_week.isoformat(), selected_date=prev_selected_date.isoformat()) }}">Trước</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('doctor.weekly', week_start=next_week.isoformat(), selected_date=next_selected_date.isoformat()) }}">Sau</a>
       </div>
     </div>
 
@@ -63,11 +63,11 @@
             {% if schedules_by_date[d] %}
               <span class="soft-badge success">{{ schedules_by_date[d]|length }} ca</span>
             {% else %}
-              <span class="soft-badge">Trong</span>
+              <span class="soft-badge">Trống</span>
             {% endif %}
           </div>
 
-          <div class="calendar-day__section">
+          <!-- <div class="calendar-day__section">
             <div class="calendar-day__label">Ca lap lai</div>
             {% if shifts_by_weekday[d.weekday()] %}
               {% for sh in shifts_by_weekday[d.weekday()] %}
@@ -79,10 +79,10 @@
             {% else %}
               <div class="calendar-empty">Chua co ca mau</div>
             {% endif %}
-          </div>
+          </div> -->
 
           <div class="calendar-day__section">
-            <div class="calendar-day__label">Lich trong he thong</div>
+            <div class="calendar-day__label">Lịch trong hệ thống</div>
             {% if schedules_by_date[d] %}
               {% for s in schedules_by_date[d] %}
                 <div class="calendar-slot
@@ -92,9 +92,9 @@
                   <span>{{ s.start_time.strftime('%H:%M') }}-{{ s.end_time.strftime('%H:%M') }}</span>
                   <span>
                     {% if s.appointment and s.appointment.status.value != 'CANCELLED' %}
-                      Da book
+                      Đã book
                     {% elif s.is_available %}
-                      Trong
+                      Trống
                     {% else %}
                       Khoa
                     {% endif %}
@@ -102,7 +102,7 @@
                 </div>
               {% endfor %}
             {% else %}
-              <div class="calendar-empty">Chua tao slot</div>
+              <div class="calendar-empty">Chưa tạo slot</div>
             {% endif %}
           </div>
         </a>
@@ -116,10 +116,10 @@
     <div class="card h-100">
       <div class="card-body p-4">
         <div class="mb-3">
-          <h2 class="section-title mb-1">Them ca cho ngay da chon</h2>
+          <h2 class="section-title mb-1">Thêm ca cho ngày đã chọn</h2>
           <p class="section-subtitle">
             Ngay {{ selected_date.strftime('%d/%m/%Y') }} - {{ weekday_labels[selected_date.weekday()] }}.
-            Co the chon nhieu tuan de ap dung cung mot ca mau trong mot lan tao.
+            Có thể chọn nhiều tuần để áp dụng cùng một ca mẫu trong một lần tạo.
           </p>
         </div>
 
@@ -129,7 +129,7 @@
           <input type="hidden" name="selected_date" value="{{ selected_date.isoformat() }}" />
 
           <div class="col-12">
-            <label class="form-label fw-semibold">Ngay duoc chon</label>
+            <label class="form-label fw-semibold">Ngày được chọn</label>
             <input class="form-control" value="{{ selected_date.strftime('%d/%m/%Y') }}" disabled />
             {% for e in form.weekday.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
           </div>
@@ -147,7 +147,7 @@
           </div>
 
           <div class="col-12">
-            <label class="form-label fw-semibold">Cac tuan ap dung</label>
+            <label class="form-label fw-semibold">Các tuần áp dụng</label>
             <div class="week-option-grid">
               {% for week_value, week_label in week_options %}
                 <label class="week-option">
@@ -162,11 +162,11 @@
                 </label>
               {% endfor %}
             </div>
-            <div class="form-text">Mac dinh da chon tuan dang xem. Co the tick them cac tuan khac de ap dung cung mau ca.</div>
+            <div class="form-text">Mặc định đã chọn tuần đang xem. Có thể tick thêm các tuần khác để áp dụng cùng mẫu ca.</div>
           </div>
 
           <div class="col-12 d-grid">
-            <button class="btn btn-primary" type="submit">Them ca cho {{ weekday_labels[selected_date.weekday()] }}</button>
+            <button class="btn btn-primary" type="submit">Thêm ca cho {{ weekday_labels[selected_date.weekday()] }}</button>
           </div>
         </form>
       </div>
@@ -177,17 +177,17 @@
     <div class="card h-100">
       <div class="card-body p-4">
         <div class="mb-3">
-          <h2 class="section-title mb-1">Ca lam mau cua ngay da chon</h2>
-          <p class="section-subtitle">Xoa ca mau o day chi xoa template va slot cua dung tuan dang xem.</p>
+          <h2 class="section-title mb-1">Ca làm của ngày đã chọn</h2>
+          <p class="section-subtitle">Xóa ca trong ngày chỉ xóa template và slot của đúng tuần đang xem.</p>
         </div>
 
         <div class="table-responsive">
           <table class="table align-middle mb-0">
             <thead>
               <tr>
-                <th>Thu</th>
-                <th>Khung gio</th>
-                <th class="text-end">Thao tac</th>
+                <th>Thứ</th>
+                <th>Khung giờ</th>
+                <th class="text-end">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -200,12 +200,12 @@
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                       <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}" />
                       <input type="hidden" name="selected_date" value="{{ selected_date.isoformat() }}" />
-                      <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Delete this shift?')">Xoa</button>
+                      <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Delete this shift?')">Xóa</button>
                     </form>
                   </td>
                 </tr>
               {% else %}
-                <tr><td colspan="3"><div class="empty-state py-3">Ngay nay chua co ca lap lai nao.</div></td></tr>
+                <tr><td colspan="3"><div class="empty-state py-3">Chưa có ca.</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
